@@ -1,0 +1,12 @@
+# Backend
+api/node_modules
+api/dist
+api/.env
+
+# Frontend
+frontend/node_modules
+frontend/.env
+
+# Docker
+*.log
+docker-compose.override.yml
