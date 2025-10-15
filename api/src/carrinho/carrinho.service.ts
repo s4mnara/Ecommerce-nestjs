@@ -2,12 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Carrinho } from '../entity/carrinho.entity';
+import { Usuario } from '../entity/usuario.entity';
+import { Produto } from '../entity/produto.entity';
 
 @Injectable()
 export class CarrinhosService {
   constructor(
     @InjectRepository(Carrinho)
-    private carrinhoRepository: Repository<Carrinho>,
+    private readonly carrinhoRepository: Repository<Carrinho>,
   ) {}
 
   async findAll(): Promise<Carrinho[]> {
@@ -41,3 +43,4 @@ export class CarrinhosService {
     await this.carrinhoRepository.remove(carrinho);
   }
 }
+
