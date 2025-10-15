@@ -1,77 +1,43 @@
-version: '3.8'
+version: '3.9'
 
 services:
+  api:
+    build:
+      context: ./api      
+      dockerfile: Dockerfile
+    container_name: loja_api
+    command: npm run start:dev
+    ports:
+      - "${PORT}:3000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    networks:
+      - loja-network
 
-  # PostgreSQL
   db:
-    image: postgres:15
-    container_name: postgres-ecommerce
+    image: postgres:16
+    container_name: loja_db
+    restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: senha123
-      POSTGRES_DB: ecommerce
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - loja-network
 
-  # Zookeeper (necessário para Kafka)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-
-  # Kafka
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"
-
-  # Backend NestJS
-  api:
-    build: ./api
-    container_name: nestjs-api
-    command: npm run start:dev
-    volumes:
-      - ./api:/app
-      - /app/node_modules
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_HOST: db
-      DATABASE_PORT: 5432
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: senha123
-      DATABASE_NAME: ecommerce
-      KAFKA_BROKER: kafka:9092
-    depends_on:
-      - db
-      - kafka
-
-  # Frontend React
-  frontend:
-    build: ./frontend
-    container_name: react-frontend
-    command: npm start
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "3001:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:3000
-    depends_on:
-      - api
+networks:
+  loja-network:
+    driver: bridge
 
 volumes:
   pgdata:
+

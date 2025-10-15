@@ -7,16 +7,17 @@ import { ProdutosModule } from './produtos/produtos.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'postgres-ecommerce', 
-      port: 5432,
-      username: 'postgres',
-      password: 'senha123',
-      database: 'ecommerce',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, 
-    }),
+TypeOrmModule.forRoot({
+  type: 'postgres',
+  host: 'db',           // nome do serviço do docker-compose
+  port: 5432,
+  username: 'postgres', 
+  password: 'postgres', 
+  database: 'loja_db', 
+  entities: [__dirname + '/**/*.entity{.ts,.js}'],
+  synchronize: true,
+}),
+
     UsuariosModule,
     CarrinhoModule,
     PedidosModule,
