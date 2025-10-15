@@ -15,7 +15,7 @@ import { ProdutosModule } from './produtos/produtos.module';
       password: 'senha123',
       database: 'ecommerce',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // true para dev, false para produção
+      synchronize: true, 
     }),
     UsuariosModule,
     CarrinhoModule,
