@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 
+import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { CarrinhoModule } from './carrinho/carrinho.module';
 import { PedidosModule } from './pedidos/pedidos.module';
@@ -21,6 +22,7 @@ import { KafkaModule } from './kafka/kafka.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, 
     }),
+    AuthModule,
     UsuariosModule,
     CarrinhoModule,
     PedidosModule,

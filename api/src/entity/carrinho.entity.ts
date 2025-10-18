@@ -1,20 +1,18 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, OneToMany, Column, ManyToOne } from 'typeorm';
+import { ItemCarrinho } from './item-carrinho.entity.js';
 import { Usuario } from './usuario.entity';
-import { Produto } from './produto.entity';
 
 @Entity()
 export class Carrinho {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Usuario)
-  @JoinColumn()
+  @ManyToOne(() => Usuario, usuario => usuario.carrinhos)
   usuario: Usuario;
 
-  @ManyToOne(() => Produto)
-  @JoinColumn()
-  produto: Produto;
+  @OneToMany(() => ItemCarrinho, item => item.carrinho, { cascade: ['insert', 'update'], eager: true })
+  itens: ItemCarrinho[];
 
-  @Column()
-  quantidade: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  total: number;
 }

@@ -6,26 +6,31 @@ import { Pedido } from '../entity/pedido.entity';
 export class PedidosController {
   constructor(private readonly pedidosService: PedidosService) {}
 
-  @Post()
-  create(@Body() pedido: Pedido) {
-    return this.pedidosService.create(pedido);
+  // Criar pedido a partir do carrinho do usuário
+  @Post('usuario/:usuarioId')
+  criarPedido(@Param('usuarioId') usuarioId: number) {
+    return this.pedidosService.criarPedido(usuarioId);
   }
 
+  // Listar todos os pedidos
   @Get()
   findAll() {
     return this.pedidosService.findAll();
   }
 
+  // Buscar pedido por ID
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.pedidosService.findOne(id);
   }
 
+  // Atualizar pedido (ex.: alterar status)
   @Put(':id')
-  update(@Param('id') id: number, @Body() pedido: Pedido) {
+  update(@Param('id') id: number, @Body() pedido: Partial<Pedido>) {
     return this.pedidosService.update(id, pedido);
   }
 
+  // Remover pedido
   @Delete(':id')
   remove(@Param('id') id: number) {
     return this.pedidosService.remove(id);

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, NotFoundException } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { Usuario } from '../entity/usuario.entity';
 
@@ -7,7 +7,7 @@ export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
   @Post()
-  create(@Body() usuario: Usuario) {
+  create(@Body() usuario: Partial<Usuario>) {
     return this.usuariosService.create(usuario);
   }
 
@@ -22,8 +22,12 @@ export class UsuariosController {
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() usuario: Usuario) {
-    return this.usuariosService.update(id, usuario);
+  async update(@Param('id') id: number, @Body() usuario: Partial<Usuario>) {
+    const atualizado = await this.usuariosService.update(id, usuario);
+    if (!atualizado) {
+      throw new NotFoundException('Usuário não encontrado ou nenhum campo para atualizar');
+    }
+    return atualizado;
   }
 
   @Delete(':id')

@@ -1,22 +1,16 @@
 // src/kafka/kafka.module.ts
+
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { KafkaConsumer } from './kafka.consumer';
+import { Usuario } from '../entity/usuario.entity';
+import { TelegramModule } from '../telegram/telegram.module'; 
 
 @Module({
   imports: [
-    ClientsModule.register([
-      {
-        name: 'KAFKA_SERVICE',
-        transport: Transport.KAFKA,
-        options: {
-          client: { brokers: ['kafka:9092'] }, // mesmo nome do container
-          consumer: { groupId: 'loja-consumer' },
-        },
-      },
-    ]),
+    TelegramModule,
+    TypeOrmModule.forFeature([Usuario]),
   ],
   providers: [KafkaConsumer],
-  exports: [ClientsModule],
 })
 export class KafkaModule {}

@@ -23,13 +23,19 @@ export class ProdutosService {
   }
 
   async create(data: Partial<Produto>): Promise<Produto> {
-    const produto = this.produtoRepository.create(data);
-    return this.produtoRepository.save(produto);
+    const produtoComDefaults = this.produtoRepository.create({
+      ...data,
+      descricao: data.descricao || 'Sem descrição informada',
+      estoque: data.estoque !== undefined ? data.estoque : 0,
+    });
+    return this.produtoRepository.save(produtoComDefaults);
   }
 
   async update(id: number, data: Partial<Produto>): Promise<Produto> {
     const produto = await this.findOne(id);
-    Object.assign(produto, data);
+    const campos = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
+    if (Object.keys(campos).length === 0) return produto;
+    Object.assign(produto, campos);
     return this.produtoRepository.save(produto);
   }
 

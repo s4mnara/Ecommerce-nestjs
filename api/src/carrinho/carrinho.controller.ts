@@ -1,33 +1,33 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
-import { CarrinhosService } from './carrinho.service';
-import { Carrinho } from '../entity/carrinho.entity';
+import { Controller, Post, Delete, Get, Param, Body, ParseIntPipe } from '@nestjs/common';
+import { CarrinhoService } from './carrinho.service';
 
-@Controller('carrinhos')
-export class CarrinhosController {
-  constructor(private readonly carrinhosService: CarrinhosService) {}
+@Controller('carrinho')
+export class CarrinhoController {
+  constructor(private readonly carrinhoService: CarrinhoService) {}
 
-  @Post()
-  create(@Body() carrinho: Carrinho) {
-    return this.carrinhosService.create(carrinho);
+  @Get(':usuarioId')
+  verCarrinho(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
+    return this.carrinhoService.verCarrinho(usuarioId);
   }
 
-  @Get()
-  findAll() {
-    return this.carrinhosService.findAll();
+  @Post(':usuarioId/adicionar')
+  adicionarProduto(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Body() { produtoId, quantidade }: { produtoId: number; quantidade: number },
+  ) {
+    return this.carrinhoService.adicionarProduto(usuarioId, produtoId, quantidade);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.carrinhosService.findOne(id);
+  @Delete(':usuarioId/remover/:produtoId')
+  removerProduto(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number, 
+    @Param('produtoId', ParseIntPipe) produtoId: number
+  ) {
+    return this.carrinhoService.removerProduto(usuarioId, produtoId);
   }
 
-  @Put(':id')
-  update(@Param('id') id: number, @Body() carrinho: Carrinho) {
-    return this.carrinhosService.update(id, carrinho);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: number) {
-    return this.carrinhosService.remove(id);
+  @Delete(':usuarioId/limpar')
+  limparCarrinho(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
+    return this.carrinhoService.limparCarrinho(usuarioId);
   }
 }
