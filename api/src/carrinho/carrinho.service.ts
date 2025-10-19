@@ -95,9 +95,7 @@ export class CarrinhoService {
 
       await this.enviarTelegram(
         usuario,
-        `Produto <b>${produto.nome}</b> adicionado ao carrinho. Quantidade: ${quantidade}. Total atual: R$${salvo.total.toFixed(
-          2,
-        )}`,
+        `Produto <b>${produto.nome}</b> adicionado ao carrinho.\nQuantidade: ${quantidade}\nTotal atual: R$${salvo.total.toFixed(2)}`,
       );
 
       return salvo;
@@ -113,6 +111,8 @@ export class CarrinhoService {
       if (!carrinho) throw new NotFoundException('Carrinho não encontrado');
 
       const item = carrinho.itens.find(i => i.produto.id === produtoId);
+      const nomeProduto = item?.produto?.nome || 'Produto desconhecido';
+
       if (item) {
         await manager.delete(ItemCarrinho, { id: item.id });
         carrinho.itens = carrinho.itens.filter(i => i.produto.id !== produtoId);
@@ -133,7 +133,7 @@ export class CarrinhoService {
 
       await this.enviarTelegram(
         carrinho.usuario,
-        `Produto removido do carrinho. Total atual: R$${salvo.total.toFixed(2)}`,
+        `Produto <b>${nomeProduto}</b> removido do carrinho.\nTotal atual: R$${salvo.total.toFixed(2)}`,
       );
 
       return salvo;
@@ -144,9 +144,11 @@ export class CarrinhoService {
     return this.dataSource.transaction(async manager => {
       const carrinho = await manager.findOne(Carrinho, {
         where: { usuario: { id: usuarioId } },
-        relations: ['itens', 'usuario'],
+        relations: ['itens', 'itens.produto', 'usuario'],
       });
       if (!carrinho) throw new NotFoundException('Carrinho não encontrado');
+
+      const produtosRemovidos = carrinho.itens.map(i => i.produto.nome).join(', ') || 'Nenhum produto listado';
 
       if (carrinho.itens.length > 0) {
         await manager.delete(ItemCarrinho, { id: In(carrinho.itens.map(i => i.id)) });
@@ -164,7 +166,7 @@ export class CarrinhoService {
 
       await this.enviarTelegram(
         carrinho.usuario,
-        `Carrinho limpo com sucesso. Total atual: R$${salvo.total.toFixed(2)}`,
+        `Carrinho limpo com sucesso.\nProdutos removidos: ${produtosRemovidos}\nTotal atual: R$${salvo.total.toFixed(2)}`,
       );
 
       return salvo;
