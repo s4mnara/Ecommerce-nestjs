@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../entity/usuario.entity';
-import { TelegramService } from '../telegram/telegram.service';
+import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
 export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
-    private readonly telegramService: TelegramService,
+    @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
   ) {}
 
   async findAll(): Promise<Usuario[]> {
@@ -24,7 +24,6 @@ export class UsuariosService {
     return usuario;
   }
 
-  // MÉTODO NECESSÁRIO PARA O JWT AUTH SERVICE
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
     const usuario = await this.usuarioRepository.findOne({
       where: { email },
@@ -38,10 +37,10 @@ export class UsuariosService {
     const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
 
     if (usuarioSalvo.telegramChatId) {
-      await this.telegramService.enviarMensagem(
-        usuarioSalvo.telegramChatId,
-        `Olá <b>${usuarioSalvo.nome}</b>, seu cadastro foi realizado com sucesso! :)`,
-      );
+      this.kafkaClient.emit('telegram.mensagem', {
+        telegramChatId: usuarioSalvo.telegramChatId,
+        mensagem: `Olá <b>${usuarioSalvo.nome}</b>, seu cadastro foi realizado com sucesso! :)`
+      });
     }
 
     return usuarioSalvo;
