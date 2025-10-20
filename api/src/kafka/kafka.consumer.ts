@@ -15,7 +15,8 @@ export class KafkaConsumer {
 
     @EventPattern('carrinho.produto.adicionado')
     async handleProdutoAdicionado(@Payload() message: any) {
-        const { usuarioId, produtoId, quantidade, totalAtual } = message.value;
+        const payload = message.value || message;
+        const { usuarioId, produtoId, quantidade, totalAtual } = payload;
         const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
         if (!usuario || !usuario.telegramChatId) return;
 
@@ -25,7 +26,8 @@ export class KafkaConsumer {
 
     @EventPattern('carrinho.produto.removido')
     async handleProdutoRemovido(@Payload() message: any) {
-        const { usuarioId, produtoId, totalAtual } = message.value;
+        const payload = message.value || message;
+        const { usuarioId, produtoId, totalAtual } = payload;
         const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
         if (!usuario || !usuario.telegramChatId) return;
 
@@ -35,7 +37,8 @@ export class KafkaConsumer {
 
     @EventPattern('carrinho.limpo')
     async handleCarrinhoLimpo(@Payload() message: any) {
-        const { usuarioId } = message.value;
+        const payload = message.value || message;
+        const { usuarioId } = payload;
         const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
         if (!usuario || !usuario.telegramChatId) return;
 
@@ -44,9 +47,22 @@ export class KafkaConsumer {
 
     @EventPattern('telegram.mensagem')
     async handleTelegramMessage(@Payload() message: any) {
-        const { telegramChatId, mensagem } = message.value;
-        if (!telegramChatId || !mensagem) return;
+        const payload = message.value || message;
+        
+        console.log('[KafkaConsumer] Recebido evento telegram.mensagem. Payload:', payload);
+        
+        const { telegramChatId, mensagem } = payload;
+        
+        if (!telegramChatId) {
+            console.error('[KafkaConsumer] Descartando: telegramChatId está ausente ou nulo.');
+            return;
+        }
+        if (!mensagem) {
+            console.error('[KafkaConsumer] Descartando: Mensagem de texto ausente.');
+            return;
+        }
 
         await this.telegramService.enviarMensagem(telegramChatId.toString(), mensagem);
+        console.log(`[KafkaConsumer] Mensagem de Pedido CONFIRMADA e enviada via TelegramService para: ${telegramChatId}`);
     }
 }

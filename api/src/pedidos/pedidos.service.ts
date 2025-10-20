@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pedido } from '../entity/pedido.entity';
@@ -6,100 +6,136 @@ import { Carrinho } from '../entity/carrinho.entity';
 import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { ClientKafka } from '@nestjs/microservices';
 import { Usuario } from '../entity/usuario.entity';
+import { Produto } from '../entity/produto.entity';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Injectable()
-export class PedidosService {
-  constructor(
-    @InjectRepository(Pedido)
-    private readonly pedidoRepo: Repository<Pedido>,
+export class PedidosService implements OnModuleInit {
+    private readonly logger = new Logger(PedidosService.name);
 
-    @InjectRepository(Carrinho)
-    private readonly carrinhoRepo: Repository<Carrinho>,
+    constructor(
+        @InjectRepository(Pedido)
+        private readonly pedidoRepo: Repository<Pedido>,
 
-    @InjectRepository(ItemCarrinho)
-    private readonly itemRepo: Repository<ItemCarrinho>,
+        @InjectRepository(Carrinho)
+        private readonly carrinhoRepo: Repository<Carrinho>,
 
-    @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
-  ) {}
+        @InjectRepository(ItemCarrinho)
+        private readonly itemRepo: Repository<ItemCarrinho>,
 
-  async findAll(): Promise<Pedido[]> {
-    return this.pedidoRepo.find({ relations: ['usuario', 'itens', 'itens.produto'] });
-  }
+        @InjectRepository(Produto)
+        private readonly produtoRepo: Repository<Produto>,
 
-  async findOne(id: number): Promise<Pedido> {
-    const pedido = await this.pedidoRepo.findOne({
-      where: { id },
-      relations: ['usuario', 'itens', 'itens.produto'],
-    });
-    if (!pedido) throw new NotFoundException(`Pedido com ID ${id} não encontrado`);
-    return pedido;
-  }
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
+        private readonly telegramService: TelegramService,
+    ) {}
 
-  async criarPedido(usuarioId: number): Promise<Pedido> {
-    const carrinho = await this.carrinhoRepo.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
-
-    if (!carrinho || carrinho.itens.length === 0) {
-      throw new NotFoundException('Carrinho vazio ou não encontrado');
+    async onModuleInit() {
+        this.kafkaClient.subscribeToResponseOf('estoque.atualizado');
+        this.kafkaClient.subscribeToResponseOf('pedido.criado');
+        this.kafkaClient.subscribeToResponseOf('pedido.atualizado');
+        this.kafkaClient.subscribeToResponseOf('pedido.removido');
+        
+        await this.kafkaClient.connect();
     }
 
-    const pedido = this.pedidoRepo.create({
-      usuario: { id: usuarioId } as Usuario,
-      total: carrinho.total,
-      finalizado: true,
-      itens: carrinho.itens.map(item => ({
-        produto: item.produto,
-        quantidade: item.quantidade,
-        subtotal: item.subtotal,
-      })),
-    });
+    private async enviarTelegram(usuario: Usuario, mensagem: string) {
+        if (!usuario || !usuario.telegramChatId) {
+            this.logger.warn(`Usuário ${usuario?.id || 'desconhecido'} não possui telegramChatId definido. Mensagem não será enviada.`);
+            return;
+        }
+        await this.telegramService.enviarMensagem(usuario.telegramChatId.toString(), mensagem);
+    }
 
-    const salvo = await this.pedidoRepo.save(pedido);
+    async findAll(): Promise<Pedido[]> {
+        return this.pedidoRepo.find({ relations: ['usuario', 'itens', 'itens.produto'] });
+    }
 
-    // Limpa o carrinho
-    carrinho.itens = [];
-    carrinho.total = 0;
-    await this.carrinhoRepo.save(carrinho);
+    async findOne(id: number): Promise<Pedido> {
+        const pedido = await this.pedidoRepo.findOne({
+            where: { id },
+            relations: ['usuario', 'itens', 'itens.produto'],
+        });
+        if (!pedido) throw new NotFoundException(`Pedido com ID ${id} não encontrado`);
+        return pedido;
+    }
 
-    const totalNumber = Number(salvo.total);
+    async criarPedido(usuarioId: number): Promise<Pedido> {
+        const carrinho = await this.carrinhoRepo.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
 
-    await new Promise(res => setTimeout(res, 500)); // Delay antes de emitir Kafka
+        if (!carrinho || carrinho.itens.length === 0) {
+            throw new NotFoundException('Carrinho vazio ou não encontrado');
+        }
 
-    this.kafkaClient.emit('pedido.criado', {
-      usuarioId,
-      pedidoId: salvo.id,
-      total: totalNumber,
-    });
+        const usuario = carrinho.usuario;
+        const totalNumber = Number(carrinho.total);
 
-    // Mensagem Telegram via Kafka
-    this.kafkaClient.emit('telegram.mensagem', {
-      telegramChatId: carrinho.usuario.telegramChatId,
-      mensagem: `Pedido #${salvo.id} confirmado! Total: R$${totalNumber.toFixed(2)}`
-    });
+        const pedido = this.pedidoRepo.create({
+            usuario: { id: usuarioId } as Usuario,
+            total: carrinho.total,
+            finalizado: true,
+            itens: carrinho.itens.map(item => ({
+                produto: item.produto,
+                quantidade: item.quantidade,
+                subtotal: item.subtotal,
+            })),
+        });
 
-    return salvo;
-  }
+        const salvo = await this.pedidoRepo.save(pedido);
 
-  async update(id: number, data: Partial<Pedido>): Promise<Pedido> {
-    const pedido = await this.findOne(id);
-    Object.assign(pedido, data);
-    const salvo = await this.pedidoRepo.save(pedido);
+        for (const item of carrinho.itens) {
+            const produto = await this.produtoRepo.findOne({ where: { id: item.produto.id } });
+            if (!produto) continue;
 
-    this.kafkaClient.emit('pedido.atualizado', {
-      pedidoId: salvo.id,
-      ...data,
-    });
+            produto.estoque -= item.quantidade;
+            await this.produtoRepo.save(produto);
 
-    return salvo;
-  }
+            this.kafkaClient.emit('estoque.atualizado', {
+                produtoId: produto.id,
+                estoqueAtual: produto.estoque,
+            });
+        }
 
-  async remove(id: number): Promise<void> {
-    const pedido = await this.findOne(id);
-    await this.pedidoRepo.remove(pedido);
+        carrinho.itens = [];
+        carrinho.total = 0;
+        await this.carrinhoRepo.save(carrinho);
 
-    this.kafkaClient.emit('pedido.removido', { pedidoId: id });
-  }
+        // Evento Kafka para o pedido criado (para outros microservices)
+        this.kafkaClient.emit('pedido.criado', {
+            usuarioId,
+            pedidoId: salvo.id,
+            total: totalNumber,
+        });
+
+        // Chamada DIRETA ao TelegramService (igual ao CarrinhoService)
+        const mensagemConfirmacao = `Pedido #${salvo.id} confirmado! Total: R$${totalNumber.toFixed(2)}`;
+        await this.enviarTelegram(usuario, mensagemConfirmacao);
+
+        return salvo;
+    }
+
+    async update(id: number, data: Partial<Pedido>): Promise<Pedido> {
+        const pedido = await this.findOne(id);
+        Object.assign(pedido, data);
+        const salvo = await this.pedidoRepo.save(pedido);
+
+        this.kafkaClient.emit('pedido.atualizado', {
+            pedidoId: salvo.id,
+            ...data,
+        });
+
+        return salvo;
+    }
+
+    async remove(id: number): Promise<void> {
+        const pedido = await this.findOne(id);
+        await this.pedidoRepo.remove(pedido);
+
+        this.kafkaClient.emit('pedido.removido', { pedidoId: id });
+    }
 }
+
 

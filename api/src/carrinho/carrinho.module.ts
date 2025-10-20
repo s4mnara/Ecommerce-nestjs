@@ -4,7 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { Carrinho } from '../entity/carrinho.entity';
 import { Usuario } from '../entity/usuario.entity';
 import { Produto } from '../entity/produto.entity';
-import { ItemCarrinho } from '../entity/item-carrinho.entity'; 
+import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { CarrinhoService } from './carrinho.service';
 import { CarrinhoController } from './carrinho.controller';
 import { TelegramModule } from '../telegram/telegram.module';
@@ -17,11 +17,16 @@ import { TelegramModule } from '../telegram/telegram.module';
         name: 'KAFKA_SERVICE',
         transport: Transport.KAFKA,
         options: {
-          client: { brokers: ['kafka:9092'] },
+          client: {
+            brokers: ['kafka:9092'],
+          },
+          consumer: {
+            groupId: 'carrinho-consumer', // adiciona identificação única para evitar conflitos
+          },
         },
       },
     ]),
-    TelegramModule, // adiciona suporte a Telegram
+    TelegramModule,
   ],
   controllers: [CarrinhoController],
   providers: [CarrinhoService],
