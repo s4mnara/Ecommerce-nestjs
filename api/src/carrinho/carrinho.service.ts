@@ -1,175 +1,135 @@
-// src/carrinho/carrinho.service.ts
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Carrinho } from '../entity/carrinho.entity';
-import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
-import { ClientKafka } from '@nestjs/microservices';
-import { TelegramService } from '../telegram/telegram.service';
+import { ItemCarrinho } from '../entity/item-carrinho.entity';
+import { KafkaProducer } from '../kafka/kafka.producer';
 
 @Injectable()
 export class CarrinhoService {
-  private readonly logger = new Logger(CarrinhoService.name);
-
   constructor(
-    private readonly dataSource: DataSource,
     @InjectRepository(Carrinho)
-    private readonly carrinhoRepo: Repository<Carrinho>,
-    @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
-    private readonly telegramService: TelegramService,
+    private readonly carrinhoRepository: Repository<Carrinho>,
+
+    @InjectRepository(Produto)
+    private readonly produtoRepository: Repository<Produto>,
+
+    @InjectRepository(Usuario)
+    private readonly usuarioRepository: Repository<Usuario>,
+
+    @InjectRepository(ItemCarrinho)
+    private readonly itemCarrinhoRepository: Repository<ItemCarrinho>,
+
+    private readonly kafkaProducer: KafkaProducer,
   ) {}
 
-  private async enviarTelegram(usuario: Usuario, mensagem: string) {
-    if (!usuario || !usuario.telegramChatId) {
-      this.logger.warn(
-        `Usuário ${usuario?.id || 'desconhecido'} não possui telegramChatId definido. Mensagem não será enviada.`,
-      );
-      return;
-    }
-    await this.telegramService.enviarMensagem(usuario.telegramChatId.toString(), mensagem);
-  }
+  async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number) {
+    const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+    if (!usuario) throw new NotFoundException('Usuário não encontrado.');
 
-  async verCarrinho(usuarioId: number): Promise<Carrinho> {
-    const carrinho = await this.carrinhoRepo.findOne({
+    const produto = await this.produtoRepository.findOne({ where: { id: produtoId } });
+    if (!produto) throw new NotFoundException('Produto não encontrado.');
+
+    //  Busca ou cria o carrinho automaticamente
+    let carrinho = await this.carrinhoRepository.findOne({
       where: { usuario: { id: usuarioId } },
       relations: ['itens', 'itens.produto', 'usuario'],
     });
-    if (!carrinho) throw new NotFoundException('Carrinho não encontrado');
+
+    if (!carrinho) {
+      carrinho = this.carrinhoRepository.create({ usuario, itens: [] });
+      carrinho = await this.carrinhoRepository.save(carrinho);
+    }
+
+    //  Verifica se o produto já está no carrinho
+    let item = carrinho.itens.find((i) => i.produto.id === produto.id);
+
+    if (item) {
+      item.quantidade += quantidade;
+      item.subtotal = item.quantidade * produto.preco;
+      await this.itemCarrinhoRepository.save(item);
+    } else {
+      //  Cria o item completo com subtotal
+      const novoItem = this.itemCarrinhoRepository.create({
+        carrinho,
+        produto,
+        quantidade,
+        subtotal: produto.preco * quantidade,
+      });
+      await this.itemCarrinhoRepository.save(novoItem);
+      carrinho.itens.push(novoItem);
+    }
+
+    //  Atualiza o total
+    const totalAtual = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+    carrinho.total = totalAtual;
+    await this.carrinhoRepository.save(carrinho);
+
+    //  Emite evento Kafka
+    await this.kafkaProducer.enviarProdutoAdicionado(usuario.id, produto.id, quantidade, totalAtual);
+
+    return { message: 'Produto adicionado ao carrinho com sucesso!', carrinho };
+  }
+
+  async removerProduto(usuarioId: number, produtoId: number) {
+    const carrinho = await this.carrinhoRepository.findOne({
+      where: { usuario: { id: usuarioId } },
+      relations: ['itens', 'itens.produto', 'usuario'],
+    });
+
+    if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
+
+    const item = carrinho.itens.find((i) => i.produto.id === produtoId);
+    if (!item) throw new NotFoundException('Produto não está no carrinho.');
+
+    await this.itemCarrinhoRepository.remove(item);
+
+    carrinho.itens = carrinho.itens.filter((i) => i.id !== item.id);
+    carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+    await this.carrinhoRepository.save(carrinho);
+
+    //  Kafka
+    await this.kafkaProducer.enviarProdutoRemovido(usuarioId, produtoId, carrinho.total);
+
+    return { message: 'Produto removido do carrinho com sucesso.', carrinho };
+  }
+
+  async limparCarrinho(usuarioId: number) {
+    const carrinho = await this.carrinhoRepository.findOne({
+      where: { usuario: { id: usuarioId } },
+      relations: ['itens', 'usuario'],
+    });
+
+    if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
+
+    await this.itemCarrinhoRepository.remove(carrinho.itens);
+    carrinho.itens = [];
+    carrinho.total = 0;
+    await this.carrinhoRepository.save(carrinho);
+
+    //  Kafka
+    await this.kafkaProducer.enviarCarrinhoLimpo(usuarioId);
+
+    return { message: 'Carrinho limpo com sucesso.' };
+  }
+
+  async obterCarrinho(usuarioId: number) {
+    let carrinho = await this.carrinhoRepository.findOne({
+      where: { usuario: { id: usuarioId } },
+      relations: ['itens', 'itens.produto', 'usuario'],
+    });
+
+    if (!carrinho) {
+      const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+      if (!usuario) throw new NotFoundException('Usuário não encontrado.');
+
+      carrinho = this.carrinhoRepository.create({ usuario, itens: [], total: 0 });
+      carrinho = await this.carrinhoRepository.save(carrinho);
+    }
+
     return carrinho;
   }
-
-  async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number): Promise<Carrinho> {
-    return this.dataSource.transaction(async manager => {
-      const usuario = await manager.findOne(Usuario, { where: { id: usuarioId } });
-      if (!usuario) throw new NotFoundException('Usuário não encontrado');
-
-      const produto = await manager.findOne(Produto, { where: { id: produtoId } });
-      if (!produto) throw new NotFoundException('Produto não encontrado');
-
-      let carrinho = await manager.findOne(Carrinho, {
-        where: { usuario: { id: usuarioId } },
-        relations: ['itens', 'itens.produto'],
-      });
-
-      if (!carrinho) {
-        carrinho = await manager.save(Carrinho, manager.create(Carrinho, { usuario, total: 0 }));
-        carrinho.itens = [];
-      }
-
-      const precoProduto = Number(produto.preco);
-      if (isNaN(precoProduto)) throw new Error('Preço do produto inválido');
-
-      const itemExistente = carrinho.itens.find(i => i.produto.id === produtoId);
-
-      if (itemExistente) {
-        itemExistente.quantidade += quantidade;
-        itemExistente.subtotal = itemExistente.quantidade * precoProduto;
-        await manager.save(ItemCarrinho, itemExistente);
-      } else {
-        const novoItem = manager.create(ItemCarrinho, {
-          carrinho,
-          produto,
-          quantidade,
-          subtotal: quantidade * precoProduto,
-        });
-        await manager.save(ItemCarrinho, novoItem);
-        carrinho.itens.push(novoItem);
-      }
-
-      carrinho.total = carrinho.itens.reduce((acc, i) => acc + Number(i.subtotal), 0);
-      const salvo = await manager.save(Carrinho, carrinho);
-
-      // Kafka emit seguro
-      try {
-        this.kafkaClient.emit('carrinho.produto.adicionado', {
-          usuarioId,
-          produtoId,
-          quantidade,
-          totalAtual: salvo.total,
-        });
-      } catch (err) {
-        this.logger.error('Erro ao enviar evento Kafka adicionarProduto', err);
-      }
-
-      await this.enviarTelegram(
-        usuario,
-        `Produto <b>${produto.nome}</b> adicionado ao carrinho.\nQuantidade: ${quantidade}\nTotal atual: R$${salvo.total.toFixed(2)}`,
-      );
-
-      return salvo;
-    });
-  }
-
-  async removerProduto(usuarioId: number, produtoId: number): Promise<Carrinho> {
-    return this.dataSource.transaction(async manager => {
-      const carrinho = await manager.findOne(Carrinho, {
-        where: { usuario: { id: usuarioId } },
-        relations: ['itens', 'itens.produto', 'usuario'],
-      });
-      if (!carrinho) throw new NotFoundException('Carrinho não encontrado');
-
-      const item = carrinho.itens.find(i => i.produto.id === produtoId);
-      const nomeProduto = item?.produto?.nome || 'Produto desconhecido';
-
-      if (item) {
-        await manager.delete(ItemCarrinho, { id: item.id });
-        carrinho.itens = carrinho.itens.filter(i => i.produto.id !== produtoId);
-      }
-
-      carrinho.total = carrinho.itens.reduce((acc, i) => acc + Number(i.subtotal), 0);
-      const salvo = await manager.save(Carrinho, carrinho);
-
-      try {
-        this.kafkaClient.emit('carrinho.produto.removido', {
-          usuarioId,
-          produtoId,
-          totalAtual: salvo.total,
-        });
-      } catch (err) {
-        this.logger.error('Erro ao enviar evento Kafka removerProduto', err);
-      }
-
-      await this.enviarTelegram(
-        carrinho.usuario,
-        `Produto <b>${nomeProduto}</b> removido do carrinho.\nTotal atual: R$${salvo.total.toFixed(2)}`,
-      );
-
-      return salvo;
-    });
-  }
-
-  async limparCarrinho(usuarioId: number): Promise<Carrinho> {
-    return this.dataSource.transaction(async manager => {
-      const carrinho = await manager.findOne(Carrinho, {
-        where: { usuario: { id: usuarioId } },
-        relations: ['itens', 'itens.produto', 'usuario'],
-      });
-      if (!carrinho) throw new NotFoundException('Carrinho não encontrado');
-
-      const produtosRemovidos = carrinho.itens.map(i => i.produto.nome).join(', ') || 'Nenhum produto listado';
-
-      if (carrinho.itens.length > 0) {
-        await manager.delete(ItemCarrinho, { id: In(carrinho.itens.map(i => i.id)) });
-      }
-
-      carrinho.itens = [];
-      carrinho.total = 0;
-      const salvo = await manager.save(Carrinho, carrinho);
-
-      try {
-        this.kafkaClient.emit('carrinho.limpo', { usuarioId });
-      } catch (err) {
-        this.logger.error('Erro ao enviar evento Kafka limparCarrinho', err);
-      }
-
-      await this.enviarTelegram(
-        carrinho.usuario,
-        `Carrinho limpo com sucesso.\nProdutos removidos: ${produtosRemovidos}\nTotal atual: R$${salvo.total.toFixed(2)}`,
-      );
-
-      return salvo;
-    });
-  }
 }
+

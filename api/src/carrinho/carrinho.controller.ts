@@ -7,7 +7,7 @@ export class CarrinhoController {
 
   @Get(':usuarioId')
   verCarrinho(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
-    return this.carrinhoService.verCarrinho(usuarioId);
+    return this.carrinhoService.obterCarrinho(usuarioId);
   }
 
   @Post(':usuarioId/adicionar')

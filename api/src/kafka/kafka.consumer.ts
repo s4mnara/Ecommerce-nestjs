@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { TelegramService } from '../telegram/telegram.service';
 import { Repository } from 'typeorm';
@@ -7,62 +7,89 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class KafkaConsumer {
-    constructor(
-        private readonly telegramService: TelegramService,
-        @InjectRepository(Usuario)
-        private readonly usuarioRepo: Repository<Usuario>,
-    ) {}
+  private readonly logger = new Logger(KafkaConsumer.name);
 
-    @EventPattern('carrinho.produto.adicionado')
-    async handleProdutoAdicionado(@Payload() message: any) {
-        const payload = message.value || message;
-        const { usuarioId, produtoId, quantidade, totalAtual } = payload;
-        const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
-        if (!usuario || !usuario.telegramChatId) return;
+  constructor(
+    private readonly telegramService: TelegramService,
+    @InjectRepository(Usuario)
+    private readonly usuarioRepo: Repository<Usuario>,
+  ) {}
 
-        const mensagem = `Você adicionou ${quantidade} unidade(s) do produto ${produtoId} ao seu carrinho. Total atual: R$ ${totalAtual}.`;
-        await this.telegramService.enviarMensagem(usuario.telegramChatId, `Produto adicionado ao carrinho!\n\n${mensagem}`);
+  private async enviarMensagem(usuarioId: number, mensagem: string) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
+    if (!usuario) {
+      this.logger.warn(`Usuário ID ${usuarioId} não encontrado`);
+      return;
+    }
+    if (!usuario.telegramChatId) {
+      this.logger.warn(`Usuário ID ${usuarioId} não tem telegramChatId`);
+      return;
     }
 
-    @EventPattern('carrinho.produto.removido')
-    async handleProdutoRemovido(@Payload() message: any) {
-        const payload = message.value || message;
-        const { usuarioId, produtoId, totalAtual } = payload;
-        const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
-        if (!usuario || !usuario.telegramChatId) return;
+    this.logger.log(`Enviando mensagem para usuário ID ${usuarioId} (chatId: ${usuario.telegramChatId})`);
+    await this.telegramService.enviarMensagem(usuario.telegramChatId, mensagem);
+  }
 
-        const mensagem = `Você removeu o produto ${produtoId} do seu carrinho. Total atual: R$ ${totalAtual}.`;
-        await this.telegramService.enviarMensagem(usuario.telegramChatId, `Produto removido do carrinho!\n\n${mensagem}`);
+  @EventPattern('carrinho.produto.adicionado')
+  async handleProdutoAdicionado(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: carrinho.produto.adicionado | Payload: ${JSON.stringify(payload)}`);
+
+    const { usuarioId, produtoId, quantidade, totalAtual } = payload;
+    const mensagem = `Você adicionou ${quantidade} unidade(s) do produto ${produtoId} ao seu carrinho. Total atual: R$ ${totalAtual}.`;
+    await this.enviarMensagem(usuarioId, `Produto adicionado ao carrinho!\n\n${mensagem}`);
+  }
+
+  @EventPattern('carrinho.produto.removido')
+  async handleProdutoRemovido(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: carrinho.produto.removido | Payload: ${JSON.stringify(payload)}`);
+
+    const { usuarioId, produtoId, totalAtual } = payload;
+    const mensagem = `Você removeu o produto ${produtoId} do seu carrinho. Total atual: R$ ${totalAtual}.`;
+    await this.enviarMensagem(usuarioId, `Produto removido do carrinho!\n\n${mensagem}`);
+  }
+
+  @EventPattern('carrinho.limpo')
+  async handleCarrinhoLimpo(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: carrinho.limpo | Payload: ${JSON.stringify(payload)}`);
+
+    const { usuarioId } = payload;
+    await this.enviarMensagem(usuarioId, `Carrinho limpo!\n\nSeu carrinho foi limpo.`);
+  }
+
+  @EventPattern('telegram.mensagem')
+  async handleTelegramMessage(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: telegram.mensagem | Payload: ${JSON.stringify(payload)}`);
+
+    const { telegramChatId, mensagem } = payload;
+    if (!telegramChatId || !mensagem) {
+      this.logger.warn('Payload inválido para telegram.mensagem');
+      return;
     }
 
-    @EventPattern('carrinho.limpo')
-    async handleCarrinhoLimpo(@Payload() message: any) {
-        const payload = message.value || message;
-        const { usuarioId } = payload;
-        const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
-        if (!usuario || !usuario.telegramChatId) return;
+    await this.telegramService.enviarMensagem(telegramChatId.toString(), mensagem);
+  }
 
-        await this.telegramService.enviarMensagem(usuario.telegramChatId, `Carrinho limpo!\n\nSeu carrinho foi limpo.`);
-    }
+  @EventPattern('usuario.cadastrado')
+  async handleUsuarioCadastrado(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: usuario.cadastrado | Payload: ${JSON.stringify(payload)}`);
 
-    @EventPattern('telegram.mensagem')
-    async handleTelegramMessage(@Payload() message: any) {
-        const payload = message.value || message;
-        
-        console.log('[KafkaConsumer] Recebido evento telegram.mensagem. Payload:', payload);
-        
-        const { telegramChatId, mensagem } = payload;
-        
-        if (!telegramChatId) {
-            console.error('[KafkaConsumer] Descartando: telegramChatId está ausente ou nulo.');
-            return;
-        }
-        if (!mensagem) {
-            console.error('[KafkaConsumer] Descartando: Mensagem de texto ausente.');
-            return;
-        }
+    const { usuarioId, nome } = payload;
+    const mensagem = `👋 Olá ${nome}! Seu cadastro foi realizado com sucesso.`;
+    await this.enviarMensagem(usuarioId, mensagem);
+  }
 
-        await this.telegramService.enviarMensagem(telegramChatId.toString(), mensagem);
-        console.log(`[KafkaConsumer] Mensagem de Pedido CONFIRMADA e enviada via TelegramService para: ${telegramChatId}`);
-    }
+  @EventPattern('pedido.finalizado')
+  async handlePedidoFinalizado(@Payload() message: any) {
+    const payload = message.value || message;
+    this.logger.log(`Evento recebido: pedido.finalizado | Payload: ${JSON.stringify(payload)}`);
+
+    const { usuarioId, pedidoId, total } = payload;
+    const mensagem = `Pedido #${pedidoId} confirmado!\nTotal: R$${total.toFixed(2)}`;
+    await this.enviarMensagem(usuarioId, mensagem);
+  }
 }

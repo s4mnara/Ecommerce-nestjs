@@ -5,7 +5,7 @@ import { TelegramService } from './telegram.service';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // garante que as variáveis de ambiente fiquem disponíveis em toda a aplicação
+      isGlobal: true, 
     }),
   ],
   providers: [TelegramService],

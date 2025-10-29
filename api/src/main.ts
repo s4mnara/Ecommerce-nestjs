@@ -3,22 +3,27 @@ import { AppModule } from './app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
+  // Cria a aplicação NestJS
   const app = await NestFactory.create(AppModule);
 
-  // Configura microservice Kafka
+  // Conecta o microservice Kafka para consumir eventos
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
       client: {
-        brokers: ['kafka:9092'],
+        brokers: [process.env.KAFKA_BROKER || 'kafka:9092'], // host do Kafka (Docker ou variável .env)
       },
       consumer: {
-        groupId: 'loja-consumer', 
+        groupId: 'loja-consumer', // groupId consistente para todos os consumidores
       },
     },
   });
 
-  await app.startAllMicroservices()
-  await app.listen(process.env.PORT ?? 3000);
+  // Inicia o microservice Kafka antes da API HTTP
+  await app.startAllMicroservices();
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0'); // inicia a API HTTP
+  console.log(`API rodando na porta ${process.env.PORT ?? 3000}`);
 }
+
 bootstrap();
+

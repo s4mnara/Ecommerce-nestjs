@@ -10,3 +10,6 @@ frontend/node_modules
 # Docker
 *.log
 docker-compose.override.yml
+
+node_modules
+dist
