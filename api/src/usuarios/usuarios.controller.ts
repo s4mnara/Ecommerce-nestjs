@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, NotFoundException } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Body, 
+  Param, 
+  Delete, 
+  Put, 
+  NotFoundException 
+} from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { Usuario } from '../entity/usuario.entity';
 
@@ -6,9 +15,11 @@ import { Usuario } from '../entity/usuario.entity';
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
+  
   @Post()
-  create(@Body() usuario: Partial<Usuario>) {
-    return this.usuariosService.create(usuario);
+  async create(@Body() usuario: Partial<Usuario>): Promise<Usuario> {
+    if (!usuario.role) usuario.role = 'cliente'; // define role cliente por padrão
+    return await this.usuariosService.create(usuario); // chama o service
   }
 
   @Get()

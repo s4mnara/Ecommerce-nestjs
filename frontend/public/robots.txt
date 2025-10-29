@@ -1,3 +1,4 @@
-# https://www.robotstxt.org/robotstxt.html
+# Permitir que buscadores indexem
 User-agent: *
 Disallow:
+

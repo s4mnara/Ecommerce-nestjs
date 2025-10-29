@@ -1,80 +1,69 @@
-// src/App.js
-import React, { useState, useEffect } from 'react';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage'; // NOVO IMPORT
-import ClientDashboard from './pages/ClientDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import { getUserRole } from './utils/auth'; 
+import React, { useState } from "react";
+import api from "../api";
 
-function App() {
-  const [token, setToken] = useState(localStorage.getItem('accessToken'));
-  const [userRole, setUserRole] = useState(null);
+function LoginPage({ onLoginSuccess, onGoToRegister }) {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const [isRegistering, setIsRegistering] = useState(false); 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErro(null);
+    setLoading(true);
 
-  useEffect(() => {
-    if (token) {
-      setUserRole(getUserRole());
-    } else {
-      setUserRole(null);
+    try {
+      const response = await api.post("/auth/login", { email, senha });
+      const { access_token } = response.data;
+
+      localStorage.setItem("accessToken", access_token);
+      onLoginSuccess(access_token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      const msg =
+        error.response?.data?.message || "Erro no login. Tente novamente.";
+      setErro(msg);
     }
-  }, [token]);
-
-  const handleLogin = (newToken) => {
-    setToken(newToken);
-  };
-  
-  // Lógica de estado e recarga de carrinho (mantida)
-  const [recarregarCarrinhoKey, setRecarregarCarrinhoKey] = useState(0);
-  const handleItemAdicionado = () => {
-    setRecarregarCarrinhoKey(prevKey => prevKey + 1); 
   };
 
-
-  let content;
-
-  if (token) {
-    // 1. Roteamento logado
-    if (userRole === 'admin') {
-      content = <AdminDashboard />;
-    } else if (userRole === 'user') {
-      content = (
-        <ClientDashboard 
-          recarregarCarrinhoKey={recarregarCarrinhoKey} 
-          handleItemAdicionado={handleItemAdicionado} 
+  return (
+    <div className="container">
+      <img
+        src="/assets/logoamarela.png"
+        alt="Logo PowerFit"
+        style={{ display: "block", margin: "0 auto 20px auto", width: "120px" }}
+      />
+      <h1>Login</h1>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="email"
+          placeholder="E-mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
         />
-      );
-    } else {
-      content = <p>Carregando perfil...</p>;
-    }
-  } else {
-    // 2. Roteamento deslogado
-    if (isRegistering) {
-      // Se isRegistering for true, mostra a página de Cadastro
-      content = (
-        <RegisterPage 
-          onRegistrationSuccess={() => setIsRegistering(false)} // Volta para o Login
-          onGoToLogin={() => setIsRegistering(false)} // Vai para o Login
-        />
-      );
-    } else {
-      // Se isRegistering for false, mostra a página de Login
-      content = (
-        <LoginPage 
-          onLoginSuccess={handleLogin} 
-          // Adiciona a função para ir para o Cadastro
-          onGoToRegister={() => setIsRegistering(true)} 
-        />
-      );
-    }
-  }
 
- return (
-    <div style={{ /* ... */ }}>
-      {/* ... formulário de login ... */}
-      
-      <p style={{ marginTop: '20px', textAlign: 'center' }}>
-        Não tem conta? <button onClick={onGoToRegister} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer' }}>Criar Conta</button>
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          required
+        />
+
+        <button className="button" type="submit" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </button>
+
+        {erro && <p style={{ color: "red", marginTop: "10px" }}>{erro}</p>}
+      </form>
+
+      <p style={{ textAlign: "center", marginTop: "15px" }}>
+        Não tem conta?{" "}
+        <a href="#" onClick={onGoToRegister}>
+          Criar conta
+        </a>
       </p>
     </div>
   );

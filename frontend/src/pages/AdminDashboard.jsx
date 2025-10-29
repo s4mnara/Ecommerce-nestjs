@@ -1,29 +1,24 @@
-// src/pages/AdminDashboard.jsx
 import React from 'react';
-import { handleLogout } from '../utils/auth';
 
-function AdminDashboard() {
+function AdminDashboard({ onLogout }) {
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Painel de Administração</h1>
-      <button 
-        onClick={handleLogout}
-        style={{ position: 'absolute', top: 20, right: 20 }}
+    <div style={{ maxWidth: '600px', margin: '50px auto', textAlign: 'center' }}>
+      <h1>Admin Dashboard</h1>
+      <p>Bem-vindo, Admin!</p>
+      <button
+        onClick={onLogout}
+        style={{
+          marginTop: '20px',
+          background: 'black',
+          color: 'yellow',
+          padding: '10px 20px',
+          border: 'none',
+          cursor: 'pointer',
+          borderRadius: '5px'
+        }}
       >
-        Sair
+        Logout
       </button>
-
-      <p style={{ color: 'red', fontWeight: 'bold' }}>
-        Acesso Concedido: Você possui a role 'admin'.
-      </p>
-
-      <h2>Funcionalidades CRUD:</h2>
-      <ul>
-        <li>Gerenciamento de Produtos (POST, PUT, DELETE)</li>
-        <li>Relatórios e Logs do Kafka (Opcional)</li>
-        <li>Gerenciamento de Usuários (Opcional)</li>
-      </ul>
-      
     </div>
   );
 }

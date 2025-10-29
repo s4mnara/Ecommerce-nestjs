@@ -22,6 +22,20 @@ services:
     networks:
       - loja-network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: loja_frontend
+    ports:
+      - "3000:80"
+    environment:
+      REACT_APP_API_URL: http://api:3000
+    depends_on:
+      - api
+    networks:
+      - loja-network
+
   db:
     image: postgres:16
     container_name: loja_db
@@ -83,14 +97,12 @@ services:
       timeout: 5s
       start_period: 20s
 
-
-
-
 networks:
   loja-network:
     driver: bridge
 
 volumes:
   pgdata:
+
 
 

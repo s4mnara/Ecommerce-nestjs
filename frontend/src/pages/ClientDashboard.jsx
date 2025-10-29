@@ -1,30 +1,24 @@
-// src/pages/ClientDashboard.jsx
 import React from 'react';
-import ListaProdutos from '../components/ListaProdutos';
-import Carrinho from '../components/Carrinho';
-import { handleLogout } from '../utils/auth'; // Usaremos a função de logout
 
-function ClientDashboard({ recarregarCarrinhoKey, handleItemAdicionado }) {
+function ClientDashboard({ onLogout }) {
   return (
-    <div style={{ padding: '20px', display: 'flex', gap: '30px' }}>
-      <button 
-        onClick={handleLogout}
-        style={{ position: 'absolute', top: 20, right: 20 }}
+    <div style={{ maxWidth: '600px', margin: '50px auto', textAlign: 'center' }}>
+      <h1>Client Dashboard</h1>
+      <p>Bem-vindo, Cliente!</p>
+      <button
+        onClick={onLogout}
+        style={{
+          marginTop: '20px',
+          background: 'black',
+          color: 'yellow',
+          padding: '10px 20px',
+          border: 'none',
+          cursor: 'pointer',
+          borderRadius: '5px'
+        }}
       >
-        Sair
+        Logout
       </button>
-
-      {/* Coluna de Produtos */}
-      <div style={{ flex: '1 1 50%' }}>
-        <h1>Loja Online</h1>
-        <ListaProdutos onItemAdicionado={handleItemAdicionado} /> 
-      </div>
-
-      {/* Coluna do Carrinho */}
-      <div style={{ flex: '1 1 50%' }}>
-        <h1>Meu Carrinho</h1>
-        <Carrinho key={recarregarCarrinhoKey} /> 
-      </div>
     </div>
   );
 }

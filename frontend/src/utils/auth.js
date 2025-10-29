@@ -1,23 +1,22 @@
-// src/utils/auth.js
-
-import { jwtDecode } from 'jwt-decode'; 
-
-export const getUserRole = () => {
-  const token = localStorage.getItem('accessToken');
+export const getUserRole = (token) => {
   if (!token) {
-    return null;
+    token = localStorage.getItem('accessToken');
   }
-  try {
-    const decoded = jwtDecode(token);
-    // Retorna a role ('admin' ou 'user') que está no payload
-    return decoded.role; 
-  } catch (error) {
-    console.error("Erro ao decodificar token:", error);
-    return null;
-  }
-};
 
-export const handleLogout = () => {
-  localStorage.removeItem('accessToken');
-  window.location.reload();
+  if (!token) return null;
+
+  try {
+    const parts = token.split('.');
+    const payload = parts[1];
+    
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(base64 + '==='.slice((base64.length + 3) % 4));
+
+    const payloadObject = JSON.parse(decoded);
+    
+    return payloadObject.role;
+
+  } catch (e) {
+    return null;
+  }
 };
