@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 
 function LoginPage({ onLoginSuccess, onGoToRegister }) {
@@ -6,6 +7,8 @@ function LoginPage({ onLoginSuccess, onGoToRegister }) {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,13 +19,14 @@ function LoginPage({ onLoginSuccess, onGoToRegister }) {
       const response = await api.post("/auth/login", { email, senha });
       const { access_token } = response.data;
 
-      localStorage.setItem("accessToken", access_token);
       onLoginSuccess(access_token);
       setLoading(false);
+
+      // Redireciona para dashboard
+      navigate("/dashboard");
     } catch (error) {
       setLoading(false);
-      const msg =
-        error.response?.data?.message || "Erro no login. Tente novamente.";
+      const msg = error.response?.data?.message || "Erro no login. Tente novamente.";
       setErro(msg);
     }
   };
@@ -43,7 +47,6 @@ function LoginPage({ onLoginSuccess, onGoToRegister }) {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-
         <input
           type="password"
           placeholder="Senha"
@@ -51,14 +54,11 @@ function LoginPage({ onLoginSuccess, onGoToRegister }) {
           onChange={(e) => setSenha(e.target.value)}
           required
         />
-
         <button className="button" type="submit" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>
-
         {erro && <p style={{ color: "red", marginTop: "10px" }}>{erro}</p>}
       </form>
-
       <p style={{ textAlign: "center", marginTop: "15px" }}>
         Não tem conta?{" "}
         <a href="#" onClick={onGoToRegister}>

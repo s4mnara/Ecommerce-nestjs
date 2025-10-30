@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ClientDashboard from './pages/ClientDashboard';
@@ -7,22 +8,15 @@ import { getUserRole } from './utils/auth';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('accessToken'));
-  const [userRole, setUserRole] = useState(
-    token ? getUserRole(token) : null
-  );
+  const [userRole, setUserRole] = useState(token ? getUserRole(token) : null);
   const [isRegistering, setIsRegistering] = useState(false);
 
   const handleLogin = (newToken) => {
     localStorage.setItem('accessToken', newToken);
     setToken(newToken);
-    
-    try {
-      const role = getUserRole(newToken); 
-      setUserRole(role); 
-    } catch (err) {
-      localStorage.removeItem('accessToken');
-      setToken(null);
-    }
+
+    const role = getUserRole(newToken);
+    setUserRole(role);
   };
 
   const handleLogout = () => {
@@ -33,9 +27,10 @@ function App() {
 
   let content;
   if (token && userRole) {
-    if (userRole === 'ADMIN') {
+    // Redireciona para dashboard de acordo com a role
+    if (userRole === 'admin') {
       content = <AdminDashboard onLogout={handleLogout} />;
-    } else if (userRole === 'CLIENTE') {
+    } else if (userRole === 'cliente') {
       content = <ClientDashboard onLogout={handleLogout} />;
     }
   } else if (token && !userRole) {
@@ -56,12 +51,17 @@ function App() {
 
   return (
     <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#ffeb3b', minHeight: '100vh' }}>
-      {content}
+      <Router>
+        <Routes>
+          <Route path="/*" element={content} />
+        </Routes>
+      </Router>
     </div>
   );
 }
 
 export default App;
+
 
 
 
