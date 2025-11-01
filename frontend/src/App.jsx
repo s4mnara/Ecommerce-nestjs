@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { getUserRole } from "./utils/auth";
+import "./index.css";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("accessToken"));
@@ -26,7 +27,7 @@ function App() {
 
   return (
     <Router>
-      <div style={{ textAlign: "center", padding: "20px", backgroundColor: "#ffeb3b", minHeight: "100vh" }}>
+      <div className="app-wrapper">
         <Routes>
           <Route path="/" element={<Navigate to="/login" />} />
           <Route

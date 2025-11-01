@@ -62,15 +62,15 @@ function AdminDashboard({ onLogout }) {
   };
 
   const editarProduto = (p) => {
-      setForm({...p, imagem: null}); 
-      setEditando(true);
+    setForm({...p, imagem: null}); 
+    setEditando(true);
   }
   
   const removerProduto = async (id) => { 
-      try {
-          await axiosAuth.delete(`/produtos/${id}`); 
-          carregarProdutos(); 
-      } catch (err) { console.error(err); }
+    try {
+      await axiosAuth.delete(`/produtos/${id}`); 
+      carregarProdutos(); 
+    } catch (err) { console.error(err); }
   };
 
   const produtosFiltrados = produtos.filter(p =>
@@ -94,30 +94,30 @@ function AdminDashboard({ onLogout }) {
       <div className="dashboard-body-container">
         <div className="produtos-section-wrapper">
           <div className="produto-form-panel">
-              <h3>{editando ? 'Editar Produto' : 'Adicionar Novo Produto'}</h3>
-              <form onSubmit={handleSubmit} className="produto-form">
-                <input type="text" name="nome" placeholder="Nome" value={form.nome} onChange={handleChange} required />
-                <input type="text" name="descricao" placeholder="Descrição" value={form.descricao} onChange={handleChange} />
-                <input type="number" step="0.01" name="preco" placeholder="Preço" value={form.preco} onChange={handleChange} required />
-                <input type="number" name="estoque" placeholder="Estoque" value={form.estoque} onChange={handleChange} required />
-                
-                <div className="file-input-group">
-                    <label htmlFor="imagem-upload" className="custom-file-upload-label">
-                        {form.imagem ? form.imagem.name : 'Escolher Imagem...'}
-                    </label>
-                    <input 
-                        id="imagem-upload"
-                        type="file" 
-                        name="imagem" 
-                        onChange={handleChange} 
-                        accept="image/*" 
-                        className="hidden-file-input"
-                    />
-                </div>
-                
-                <button type="submit" className="button submit-button">{editando ? 'Salvar Alterações' : 'Adicionar Produto'}</button>
-                {editando && <button type="button" onClick={() => { setEditando(false); setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null }); }} className="button cancel-button">Cancelar Edição</button>}
-              </form>
+            <h3>{editando ? 'Editar Produto' : 'Adicionar Novo Produto'}</h3>
+            <form onSubmit={handleSubmit} className="produto-form">
+              <input type="text" name="nome" placeholder="Nome" value={form.nome} onChange={handleChange} required />
+              <input type="text" name="descricao" placeholder="Descrição" value={form.descricao} onChange={handleChange} />
+              <input type="number" step="0.01" name="preco" placeholder="Preço" value={form.preco} onChange={handleChange} required />
+              <input type="number" name="estoque" placeholder="Estoque" value={form.estoque} onChange={handleChange} required />
+              
+              <div className="file-input-group">
+                <label htmlFor="imagem-upload" className="custom-file-upload-label">
+                  {form.imagem ? form.imagem.name : 'Escolher Imagem...'}
+                </label>
+                <input 
+                  id="imagem-upload"
+                  type="file" 
+                  name="imagem" 
+                  onChange={handleChange} 
+                  accept="image/*" 
+                  className="hidden-file-input"
+                />
+              </div>
+              
+              <button type="submit" className="button submit-button">{editando ? 'Salvar Alterações' : 'Adicionar Produto'}</button>
+              {editando && <button type="button" onClick={() => { setEditando(false); setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null }); }} className="button cancel-button">Cancelar Edição</button>}
+            </form>
           </div>
           
           <div className="produtos-section">
@@ -125,7 +125,6 @@ function AdminDashboard({ onLogout }) {
             <div className="produtos-carousel">
               {produtosFiltrados.map(p => (
                 <div key={p.id} className="produto-card">
-                  {/* Assumindo que o backend serve as imagens em uma rota acessível, ex: http://localhost:8080/uploads/imagem.jpg */}
                   {p.imagem && <img src={`${API_URL}/${p.imagem}`} alt={p.nome} />}
                   <h4>{p.nome}</h4>
                   <p className="produto-descricao">{p.descricao}</p>
