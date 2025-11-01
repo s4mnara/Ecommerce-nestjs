@@ -16,19 +16,27 @@ function LoginPage({ onLoginSuccess, onGoToRegister }) {
     setLoading(true);
 
     try {
+      // recebe access_token e usuario
       const response = await api.post("/auth/login", { email, senha });
-      const { access_token } = response.data;
+      const { access_token, usuario } = response.data;
 
-      onLoginSuccess(access_token);
+      // salva token e usuário no localStorage
+      localStorage.setItem("token", access_token);
+      localStorage.setItem("usuario", JSON.stringify(usuario));
+
       setLoading(false);
 
-      // Redireciona para dashboard
-      navigate("/dashboard");
-    } catch (error) {
-      setLoading(false);
-      const msg = error.response?.data?.message || "Erro no login. Tente novamente.";
-      setErro(msg);
-    }
+      // verifica se é admin antes de redirecionar
+      if (usuario.role === "admin") {
+        navigate("/dashboard");
+      } else {
+        setErro("Acesso negado: apenas administradores podem entrar.");
+      }
+      } catch (error) {
+        setLoading(false);
+        const msg = error.response?.data?.message || "Erro no login. Tente novamente.";
+        setErro(msg);
+      }
   };
 
   return (
