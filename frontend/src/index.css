@@ -1,43 +1,48 @@
+/* index.css */
 
-
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #ffeb3b; /* amarelo vibrante */
-  color: #000; /* preto */
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Reset Básico e Cores */
+:root {
+  --color-primary: #000;
+  --color-secondary: #ffeb3b;
+  --color-background-light: #fff9c4;
+  --color-background-dark: #fff8b0;
+  --color-white: #fff;
+  --color-gray-border: #ccc;
 }
 
+/* Garante que o body e o root ocupem a tela inteira */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
 
-
+/* CORREÇÃO AQUI: REMOVENDO A CENTRALIZAÇÃO PADRÃO DO BODY */
+body {
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
+  min-height: 100vh;
+  /* Linhas Removidas: display: flex; justify-content: center; align-items: center; */
+}
 
 .container {
-  max-width: 500px; /* antes era 400px */
-  margin: 50px auto; /* ajuste o espaçamento vertical se quiser */
-  padding: 30px;     /* antes era 20px */
-  background-color: #fff9c4; /* amarelo mais claro */
+  /* Mantido para Login/Cadastro, mas não deve afetar o Dashboard */
+  max-width: 500px; 
+  margin: 50px auto; 
+  padding: 30px; 
+  background-color: var(--color-background-light); 
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
-
-
-
 
 h1, h2, h3 {
   text-align: center;
   margin-bottom: 20px;
 }
 
-p {
-  text-align: center;
-}
-
-
 a {
-  color: #000;
+  color: var(--color-primary);
   text-decoration: none;
   transition: 0.2s;
 }
@@ -46,20 +51,18 @@ a:hover {
   color: #333;
 }
 
-
+/* Estilos de Botão Comum */
 .button {
-  display: inline-block;
-  background-color: #000;
-  color: #ffeb3b;
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
   font-weight: bold;
-  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  transition: background-color 0.2s, transform 0.1s;
   text-align: center;
-  width: 100%;
 }
 
 .button:hover {
@@ -67,8 +70,7 @@ a:hover {
   transform: scale(1.03);
 }
 
-
-
+/* Estilos de Formulário Comum */
 form {
   display: flex;
   flex-direction: column;
@@ -78,25 +80,287 @@ form {
 input {
   padding: 10px;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-gray-border);
   outline: none;
   font-size: 16px;
 }
 
 input:focus {
-  border-color: #000;
+  border-color: var(--color-primary);
 }
 
 
+/* Admin Dashboard - Layout de Tela Cheia */
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  width: 100%; 
+  min-height: 100vh;
+  background-color: var(--color-background-dark); 
+}
 
-@media (max-width: 480px) {
-  .container {
-    margin: 40px auto;
-    padding: 15px;
-  }
+/* Cabeçalho */
+.dashboard-header {
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
 
-  .button {
-    font-size: 14px;
+.dashboard-header h2 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.dashboard-header input {
+  padding: 8px 15px;
+  border-radius: 20px;
+  border: none;
+  flex-grow: 1;
+  max-width: 500px;
+}
+
+/* Esconde botão de logout para mobile e mostra para desktop */
+.logout-mobile { display: none; } 
+.logout-desktop { padding: 8px 15px; }
+
+/* Corpo Principal (Flex Container) */
+.dashboard-body-container {
+  display: flex;
+  flex: 1;
+  padding: 20px;
+  gap: 20px;
+  /* CORREÇÃO AQUI: REMOVIDO A LIMITAÇÃO SEVERA DE LARGURA */
+  max-width: 1400px; 
+  width: 100%;
+  margin: 0 auto; /* Centraliza a área de conteúdo principal com largura máxima de 1400px */
+}
+
+/* Divisão de Produtos (Form + Carrossel) */
+.produtos-section-wrapper {
+  flex: 2; /* Ocupa 2/3 da largura */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.produto-form-panel {
+    background-color: var(--color-background-light);
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Campo de Upload de Arquivo Customizado */
+.file-input-group {
+    border: 1px solid var(--color-gray-border);
+    border-radius: 6px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    background-color: var(--color-white);
+}
+
+.custom-file-upload-label {
+    background-color: #eee;
     padding: 8px 15px;
-  }
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
+}
+
+.hidden-file-input {
+    display: none;
+}
+
+.submit-button {
+    background-color: #4CAF50; 
+    color: var(--color-white);
+}
+
+.cancel-button {
+    background-color: #f44336; 
+    color: var(--color-white);
+}
+
+/* Carrossel de Produtos */
+.produtos-section h3 {
+    text-align: left;
+    margin-bottom: 15px;
+    padding-left: 10px;
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+.produtos-carousel {
+  display: flex;
+  overflow-x: auto; 
+  gap: 15px;
+  padding: 10px 0;
+  margin-top: 15px;
+  background-color: var(--color-white);
+  border-radius: 10px;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+}
+
+.produto-card {
+  min-width: 200px;
+  max-width: 200px;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 15px;
+  background-color: var(--color-background-light);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  text-align: left;
+}
+
+.produto-card img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.produto-card h4 {
+    margin: 5px 0;
+}
+
+.produto-card p {
+    margin: 2px 0;
+    text-align: left;
+    font-size: 0.9em;
+}
+
+.produto-preco {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.card-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+.card-actions button {
+    flex: 1;
+    padding: 6px;
+    font-size: 0.8em;
+}
+
+.edit-button { background-color: #ffc107; color: var(--color-primary); }
+.remove-button { background-color: #dc3545; color: var(--color-white); }
+.no-products-message { padding: 10px; color: #555; }
+
+
+/* Lista de Clientes */
+.clientes-section {
+  flex: 1; /* Ocupa 1/3 da largura */
+  background-color: var(--color-background-light);
+  padding: 25px;
+  overflow-y: auto;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.clientes-section h3 {
+    text-align: center;
+    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 10px;
+}
+
+.clientes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cliente-card {
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+}
+
+.cliente-card:last-child {
+    border-bottom: none;
+}
+
+.cliente-card p {
+    margin: 5px 0;
+    text-align: left;
+    font-size: 0.95em;
+}
+
+/* Rodapé */
+.dashboard-footer {
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
+  padding: 15px;
+  text-align: center;
+  margin-top: auto; /* empurra para baixo */
+}
+
+.dashboard-footer button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+    .dashboard-body-container {
+        flex-direction: column; 
+        padding: 10px;
+    }
+    
+    .produtos-section-wrapper, .clientes-section {
+        flex: none; 
+        width: 100%;
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .dashboard-header input {
+        width: 100%;
+        max-width: none;
+    }
+    
+    /* Esconde botão de logout desktop e mostra para mobile */
+    .logout-desktop { display: none; } 
+    .logout-mobile { display: block; }
+}
+
+@media (max-width: 600px) {
+    .dashboard-body-container {
+        padding: 10px 5px;
+    }
+    
+    .produto-form-panel {
+        padding: 15px;
+    }
+    
+    .produtos-carousel {
+        padding: 10px;
+    }
+    
+    .produto-card {
+        min-width: 160px;
+        max-width: 160px;
+        padding: 10px;
+    }
 }
