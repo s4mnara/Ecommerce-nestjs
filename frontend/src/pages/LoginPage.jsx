@@ -38,8 +38,17 @@ function LoginPage({ onLoginSuccess }) {
 
   return (
     <div className="container">
-      <img src="/assets/logoamarela.png" alt="Logo" style={{ marginBottom: "20px", width: "120px" }} />
-      <h1>Login</h1>
+      <div className="login-header-group">
+        <img src="/assets/logoamarela.png" alt="Logo" style={{ width: "120px" }} />
+        <h2 className="store-name">PowerFit Suplementos</h2>
+      </div>
+
+      <div className="form-header">
+        <h1>Login</h1>
+        <a href="#" className="forgot-password-link">
+        </a>
+      </div>
+
       <form onSubmit={handleSubmit}>
         <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} required />
@@ -48,7 +57,7 @@ function LoginPage({ onLoginSuccess }) {
         </button>
         {erro && <p style={{ color: "red" }}>{erro}</p>}
       </form>
-      <p>
+      <p style={{ textAlign: "center", marginTop: "15px" }}>
         Não tem conta?{" "}
         <a href="#" onClick={() => navigate("/register")}>
           Criar conta
