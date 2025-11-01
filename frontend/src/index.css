@@ -293,6 +293,9 @@ input:focus {
     font-size: 0.95em;
 }
 
+/* ======================================= */
+/* Rodapé Geral */
+/* ======================================= */
 .dashboard-footer {
   background-color: var(--color-primary);
   color: var(--color-secondary);
@@ -310,13 +313,117 @@ input:focus {
   cursor: pointer;
 }
 
+/* ======================================= */
+/* CLIENT DASHBOARD STYLES */
+/* ======================================= */
+
+.client-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.client-actions .quantity-input {
+    width: 50px;
+    padding: 5px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.small-button {
+    padding: 5px 10px !important;
+    font-size: 0.85em !important;
+}
+
+/* 🎯 Rodapé do Cliente - Foco na Separação */
+.client-footer {
+    display: flex;
+    justify-content: center; /* Centraliza o grupo de botões */
+    align-items: center;
+    gap: 20px; /* Adiciona espaço entre os botões */
+    padding: 15px 20px;
+}
+
+.footer-button {
+    /* Removido flex: 1 para controle de tamanho mais natural */
+    margin: 0; /* Garante que não há margens competindo com o gap */
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: var(--color-secondary); 
+    color: var(--color-primary);
+    font-weight: bold;
+    min-width: 180px; /* Garante tamanho mínimo */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.footer-button:hover {
+    background-color: var(--color-white);
+}
+
+.cart-button {
+    background-color: #007bff;
+    color: var(--color-white);
+}
+
+.cart-button:hover {
+    background-color: #0056b3;
+}
+
+/* Painel Lateral (Carrinho e Histórico) */
+.side-panel {
+    flex: 1; /* Ocupa 1/3 da largura */
+    background-color: var(--color-background-light);
+    padding: 25px;
+    overflow-y: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 400px;
+}
+
+.cart-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.cart-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.quantity-input-small {
+    width: 40px;
+    padding: 4px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.cart-summary {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.full-width-button {
+    width: 100%;
+}
+
+
+/* ======================================= */
+/* Responsividade */
+/* ======================================= */
 @media (max-width: 992px) {
     .dashboard-body-container {
         flex-direction: column; 
         padding: 10px;
     }
     
-    .produtos-section-wrapper, .clientes-section {
+    .produtos-section-wrapper, .clientes-section, .side-panel {
         flex: none; 
         width: 100%;
     }
@@ -334,6 +441,20 @@ input:focus {
     
     .logout-desktop { display: none; } 
     .logout-mobile { display: block; }
+
+    /* Ajuste de Rodapé em telas menores */
+    .client-footer {
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+    
+    .footer-button {
+        width: 100%;
+        min-width: 0; 
+        max-width: 300px; 
+        margin: 0;
+    }
 }
 
 @media (max-width: 600px) {
