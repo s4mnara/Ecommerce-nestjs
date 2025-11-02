@@ -158,15 +158,17 @@ function ClientDashboard({ onLogout }) {
         if (!userId) return;
 
         try {
-            await axiosAuth.post(`/pedidos/usuario/${userId}`);
+            // ROTA PARA INICIAR O PAGAMENTO COM O STRIPE
+            const res = await axiosAuth.post(`/pagamentos/iniciar/${userId}`);
             
-            alert("Pedido finalizado com sucesso!");
-            carregarPedidos();
-            carregarCarrinho(); 
+            const { url } = res.data;
+
+            // REDIRECIONA PARA O CHECKOUT DO STRIPE
+            window.location.href = url; 
             
         } catch (error) {
-            console.error("Erro ao finalizar pedido:", error);
-            alert("Erro ao finalizar pedido. Verifique a API de pedidos e o CarrinhoService.");
+            console.error("Erro ao iniciar pagamento:", error);
+            alert("Erro ao iniciar o processo de pagamento. Verifique o console.");
         }
         setShowCart(false);
     };

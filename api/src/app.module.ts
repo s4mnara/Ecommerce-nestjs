@@ -8,26 +8,28 @@ import { CarrinhoModule } from './carrinho/carrinho.module';
 import { PedidosModule } from './pedidos/pedidos.module';
 import { ProdutosModule } from './produtos/produtos.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { PagamentoModule } from './pagamento/pagamento.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }), 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: +(process.env.DB_PORT || 5432), // converte para number e define padrão
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_DATABASE || 'loja_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, 
-    }),
-    AuthModule,
-    UsuariosModule,
-    CarrinhoModule,
-    PedidosModule,
-    ProdutosModule,
-    KafkaModule, 
-  ],
+    imports: [
+        ConfigModule.forRoot({ isGlobal: true }), 
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            port: +(process.env.DB_PORT || 5432),
+            username: process.env.DB_USERNAME || 'postgres',
+            password: process.env.DB_PASSWORD || 'postgres',
+            database: process.env.DB_DATABASE || 'loja_db',
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: true, 
+        }),
+        AuthModule,
+        UsuariosModule,
+        CarrinhoModule,
+        PedidosModule,
+        ProdutosModule,
+        KafkaModule, 
+        PagamentoModule,
+    ],
 })
 export class AppModule {}
