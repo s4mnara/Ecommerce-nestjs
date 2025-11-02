@@ -11,13 +11,13 @@ export class Produto {
   @Column()
   descricao: string;
 
-  @Column('decimal')
+  @Column('decimal',{ precision: 10, scale: 2 })
   preco: number;
 
   @Column()
   estoque: number;
 
-  @Column({ nullable: true })
-  imagem: string | null;
+  // @Column({ nullable: true })
+  // imagem: string | null;
 }
 
