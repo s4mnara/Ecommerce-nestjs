@@ -16,4 +16,8 @@ export class Produto {
 
   @Column()
   estoque: number;
+
+  @Column({ nullable: true })
+  imagem: string | null;
 }
+
