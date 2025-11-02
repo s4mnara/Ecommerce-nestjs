@@ -40,9 +40,8 @@ function ClientDashboard({ onLogout }) {
       const res = await axiosAuth.get("/produtos");
       setProdutos(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Erro ao buscar produtos:", err);
       axios
-        .get("http://localhost:8080/produtos") 
+        .get("http://localhost:8080/produtos")
         .then((res) => setProdutos(res.data))
         .catch((err) => console.error("Erro ao buscar produtos:", err));
     }
@@ -65,6 +64,25 @@ function ClientDashboard({ onLogout }) {
 
   const handleRemoveFromCart = (id) => {
     setCarrinho((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateQuantity = (id, change) => {
+    setCarrinho(prev => {
+        return prev.map(item => {
+            if (item.id === id) {
+                const newQuantity = item.quantidade + change;
+                if (newQuantity <= 0) {
+                    return null;
+                }
+                return { ...item, quantidade: newQuantity };
+            }
+            return item;
+        }).filter(item => item !== null);
+    });
+  };
+  
+  const handleClearCart = () => {
+    setCarrinho([]);
   };
 
   const handleShowCart = () => {
@@ -119,32 +137,69 @@ function ClientDashboard({ onLogout }) {
   const CarrinhoPanel = () => (
     <div className="cart-container side-panel clients-section">
       <h2>🛒 Seu Carrinho</h2>
-      {/* Botão de Fechar */}
       <button onClick={() => setShowCart(false)} className="button close-cart-button small-button">Fechar</button> 
       
       {carrinho.length === 0 ? (
         <p>Carrinho vazio.</p>
       ) : (
         <>
-          <ul className="clientes-list">
+          <ul className="clientes-list" style={{ padding: 0, listStyle: 'none' }}>
             {carrinho.map((item) => (
-              <li key={item.id} className="cliente-card cart-item">
-                <span>{item.nome}</span>
-                <span>Qtd: {item.quantidade}</span>
-                <span>R${(item.preco * item.quantidade).toFixed(2)}</span>
+              <li key={item.id} className="cliente-card cart-item" style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 80px 100px', 
+                  gap: '10px', 
+                  alignItems: 'center',
+                  marginBottom: '10px',
+                  paddingBottom: '10px',
+                  borderBottom: '1px solid var(--color-gray-border)'
+              }}>
+                <div>
+                    <span style={{ fontWeight: 'bold' }}>{item.nome}</span>
+                    <span style={{ display: 'block', fontSize: '0.9em', color: 'var(--color-secondary)' }}>
+                        R${(item.preco * item.quantidade).toFixed(2)}
+                    </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <button
+                        className="button icon-button"
+                        onClick={() => handleUpdateQuantity(item.id, -1)}
+                        style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}
+                    >
+                        -
+                    </button>
+                    <span style={{ fontWeight: 'bold' }}>{item.quantidade}</span>
+                    <button
+                        className="button icon-button"
+                        onClick={() => handleUpdateQuantity(item.id, 1)}
+                        style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}
+                    >
+                        +
+                    </button>
+                </div>
                 <button
-                  className="button remove-button small-button"
-                  onClick={() => handleRemoveFromCart(item.id)}
+                    className="button remove-button"
+                    onClick={() => handleRemoveFromCart(item.id)}
+                    style={{ padding: '5px 10px', fontSize: '0.8em', minWidth: '70px' }} 
                 >
-                  Remover
+                    Remover
                 </button>
               </li>
             ))}
           </ul>
-          <div className="cart-summary">
-            <p className="cart-total">Total: R${totalCarrinho}</p>
+          <div className="cart-summary" style={{ marginTop: '20px' }}>
+            <p className="cart-total" style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Total: R${totalCarrinho}</p>
+            
+            <button 
+                onClick={handleClearCart} 
+                className="button remove-button"
+                style={{ marginBottom: '10px', backgroundColor: '#8B0000' }}
+            >
+                Limpar Carrinho
+            </button>
+
             <button onClick={finalizarPedido} className="button submit-button full-width-button">
-                Finalizar Pedido
+              Finalizar Pedido
             </button>
           </div>
         </>
@@ -155,7 +210,6 @@ function ClientDashboard({ onLogout }) {
   const HistoricoPanel = () => (
     <div className="side-panel clients-section">
         <h3>📜 Histórico de Pedidos ({history.length})</h3>
-        {/* Botão de Fechar */}
         <button onClick={() => setShowHistory(false)} className="button close-cart-button small-button">Fechar</button> 
 
         <div className="clientes-list">

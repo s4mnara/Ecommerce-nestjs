@@ -1,19 +1,13 @@
-/* =========================
-    🎨 VARIÁVEIS DE TEMA
-========================= */
 :root {
-    --color-primary: #000;
-    --color-secondary: #ffeb3b;
-    --color-background-light: #fff9c4;
-    --color-background-dark: #fff8b0;
-    --color-white: #fff;
-    --color-gray-border: #ccc;
-    --color-accent-yellow: #ffc107;
+    --color-primary: #000000;
+    --color-secondary: #FFC107;
+    --color-background-light: #2c2c2c;
+    --color-background-dark: #1f1f1f;
+    --color-white: #ffffff;
+    --color-gray-border: #444444;
+    --color-accent-yellow: #FFB300;
 }
 
-/* =========================
-    🧱 RESET E BASE
-========================= */
 html, body, #root {
     height: 100%;
     width: 100%;
@@ -24,40 +18,36 @@ html, body, #root {
 
 body {
     position: relative;
-    background-image:url('../public/assets/background.jpeg');
+    background-image:url('../public/assets/background.jpeg'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    color: var(--color-white); 
 }
 
 body::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-color: rgba(255, 235, 59, 0.4);
+    background-color: rgba(0, 0, 0, 0.7);
     z-index: -1;
 }
-
 
 .app-wrapper {
     min-height: 100vh;
     width: 100%;
 }
 
-/* =========================
-    🟡 CONTAINERS
-========================= */
 .container {
     position: relative;
     max-width: 500px;
     margin: 50px auto;
     padding: 30px;
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    
     background-image: none;
     background-color: var(--color-background-light); 
     z-index: 10;
@@ -67,7 +57,7 @@ body::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-color: rgba(255, 235, 59, 0.6); 
+    background-color: rgba(0, 0, 0, 0.3); 
     z-index: 0;
 }
 
@@ -76,10 +66,6 @@ body::before {
     z-index: 1;
 }
 
-
-/* =========================
-    🔐 LOGIN / FORMULÁRIOS
-========================= */
 .login-header-group {
     display: flex;
     align-items: center;
@@ -93,7 +79,7 @@ body::before {
     font-size: 1.8em;
     font-weight: bold;
     margin: 0;
-    color: var(--color-primary);
+    color: var(--color-secondary);
 }
 
 .form-header {
@@ -109,34 +95,31 @@ body::before {
     text-align: left;
     margin: 0;
     flex-grow: 1;
+    color: var(--color-white);
 }
 
 .forgot-password-link {
     font-size: 0.9em;
     white-space: nowrap;
+    color: var(--color-white);
 }
 
-/* =========================
-    🔤 TEXTOS E LINKS
-========================= */
 h1, h2, h3 {
     text-align: center;
     margin-bottom: 20px;
+    color: var(--color-white);
 }
 
 a {
-    color: var(--color-primary);
+    color: var(--color-secondary);
     text-decoration: none;
     transition: 0.2s;
 }
 
 a:hover {
-    color: #333;
+    color: var(--color-accent-yellow);
 }
 
-/* =========================
-    🔘 BOTÕES
-========================= */
 .button {
     background-color: var(--color-primary);
     color: var(--color-secondary);
@@ -151,34 +134,49 @@ a:hover {
 }
 
 .button:hover {
-    background-color: #333;
+    background-color: var(--color-background-light);
+    color: var(--color-secondary);
     transform: scale(1.03);
 }
 
-/* =========================
-    🧾 FORMULÁRIOS E INPUTS
-========================= */
+.save-item-button {
+    background-color: var(--color-secondary);
+    color: var(--color-primary);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.2s, transform 0.1s;
+    text-align: center;
+}
+
+.save-item-button:hover {
+    background-color: var(--color-accent-yellow);
+    transform: scale(1.03);
+}
+
 form {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-input {
+input, select {
     padding: 10px;
     border-radius: 6px;
     border: 1px solid var(--color-gray-border);
     outline: none;
     font-size: 16px;
+    background-color: var(--color-background-dark);
+    color: var(--color-white);
 }
 
-input:focus {
-    border-color: var(--color-primary);
+input:focus, select:focus {
+    border-color: var(--color-secondary);
 }
 
-/* =========================
-    🧭 DASHBOARD CLIENTE
-========================= */
 .admin-dashboard {
     display: flex;
     flex-direction: column;
@@ -187,11 +185,8 @@ input:focus {
     background-color: var(--color-background-dark);
 }
 
-/* =========================
-    🧱 HEADER
-========================= */
 .dashboard-header {
-    background-color: var(--color-primary);
+    background-color: #111111;
     color: var(--color-secondary);
     padding: 15px 25px;
     display: flex;
@@ -204,17 +199,19 @@ input:focus {
     display: flex;
     align-items: center;
     gap: 10px;
+    color: var(--color-white);
 }
 
 .client-logo-header {
     width: 35px;
     height: 35px;
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
 }
 
 .dashboard-header h2 {
     margin: 0;
     white-space: nowrap;
+    color: var(--color-secondary);
 }
 
 .dashboard-header input {
@@ -223,11 +220,10 @@ input:focus {
     border: none;
     flex-grow: 1;
     max-width: 400px;
+    background-color: var(--color-background-dark);
+    color: var(--color-white);
 }
 
-/* =========================
-    🛒 BOTÕES DE HEADER
-========================= */
 .pedidos-button {
     background-color: var(--color-accent-yellow);
     color: var(--color-primary);
@@ -258,44 +254,52 @@ input:focus {
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    filter: none;
+    filter: none; /* Alterado para ícones pretos */
 }
 
 .icon-img-white {
     width: 25px;
     height: 25px;
     flex-shrink: 0;
-    filter: invert(100%);
+    filter: none; /* Alterado para ícones pretos */
 }
 
 .logout-desktop {
-    background-color: var(--color-primary) !important;
-    color: var(--color-white) !important;
+    background-color: var(--color-secondary) !important;
+    color: var(--color-primary) !important;
     padding: 5px 10px !important;
     border-radius: 8px;
     gap: 6px;
 }
 
 .logout-desktop:hover {
-    background-color: #333 !important;
+    background-color: var(--color-accent-yellow) !important;
 }
 
 .logout-desktop span {
     font-size: 14px;
     font-weight: bold;
-    color: var(--color-white);
+    color: var(--color-primary);
 }
 
 .header-cart-button {
     gap: 6px;
     padding: 5px 10px !important;
-    background-color: var(--color-accent-yellow) !important;
+    background-color: var(--color-secondary) !important;
     border-radius: 8px;
     color: var(--color-primary);
 }
 
 .header-cart-button:hover {
-    background-color: var(--color-secondary) !important;
+    background-color: var(--color-accent-yellow) !important;
+}
+
+.header-cart-button .icon-img {
+    filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);
+}
+
+.logout-desktop .icon-img-white {
+    filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);
 }
 
 .cart-count {
@@ -308,9 +312,6 @@ input:focus {
     display: none;
 }
 
-/* =========================
-    🧩 BODY E SEÇÕES
-========================= */
 .dashboard-body-container {
     display: flex;
     flex: 1;
@@ -322,9 +323,32 @@ input:focus {
     align-items: flex-start;
 }
 
-/* =========================
-    📦 PRODUTOS
-========================= */
+.sidebar {
+    background-color: #111111;
+    color: var(--color-white);
+    padding: 15px 0;
+    width: 200px; 
+    min-height: 100%;
+}
+
+.sidebar a {
+    color: var(--color-white);
+    padding: 10px 20px;
+    display: block;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    background-color: #333333;
+    color: var(--color-secondary);
+}
+
+.sidebar a.active {
+    background-color: var(--color-background-light);
+    color: var(--color-secondary);
+    border-left: 5px solid var(--color-secondary);
+}
+
 .produtos-section-wrapper {
     flex: 2;
     display: flex;
@@ -341,7 +365,8 @@ input:focus {
     background-color: var(--color-background-light);
     padding: 25px;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    color: var(--color-white);
 }
 
 .file-input-group {
@@ -350,22 +375,23 @@ input:focus {
     padding: 5px;
     display: flex;
     align-items: center;
-    background-color: var(--color-white);
+    background-color: var(--color-background-dark);
 }
 
 .custom-file-upload-label {
-    background-color: #eee;
+    background-color: #333;
     padding: 8px 15px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-gray-border);
     margin-right: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 70%;
     flex-grow: 1;
+    color: var(--color-white);
 }
 
 .hidden-file-input {
@@ -373,12 +399,16 @@ input:focus {
 }
 
 .submit-button {
-    background-color: #4CAF50;
-    color: var(--color-white);
+    background-color: var(--color-secondary); 
+    color: var(--color-primary);
+}
+
+.submit-button:hover {
+    background-color: var(--color-accent-yellow);
 }
 
 .cancel-button {
-    background-color: #f44336;
+    background-color: #8B0000;
     color: var(--color-white);
 }
 
@@ -387,6 +417,7 @@ input:focus {
     margin-bottom: 15px;
     padding-left: 10px;
     border-bottom: 2px solid var(--color-secondary);
+    color: var(--color-white);
 }
 
 .produtos-carousel {
@@ -395,20 +426,20 @@ input:focus {
     gap: 15px;
     padding: 10px 0;
     margin-top: 15px;
-    background-color: var(--color-white);
+    background-color: var(--color-background-light);
     border-radius: 10px;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
     width: 100%;
 }
 
 .produto-card {
     min-width: 200px;
     max-width: 200px;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--color-gray-border);
     border-radius: 10px;
     padding: 15px;
-    background-color: var(--color-background-light);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    background-color: var(--color-background-dark);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     text-align: left;
     flex-shrink: 0;
 }
@@ -423,7 +454,7 @@ input:focus {
 
 .produto-preco {
     font-weight: bold;
-    color: #007bff;
+    color: var(--color-secondary);
 }
 
 .card-actions {
@@ -438,19 +469,72 @@ input:focus {
     font-size: 0.8em;
 }
 
-.edit-button { background-color: #ffc107; color: var(--color-primary); }
-.remove-button { background-color: #dc3545; color: var(--color-white); }
+.edit-button { 
+    background-color: var(--color-secondary); 
+    color: var(--color-primary); 
+}
+.edit-button:hover { 
+    background-color: var(--color-accent-yellow); 
+}
+.remove-button { 
+    background-color: #8B0000; 
+    color: var(--color-white); 
+}
+.remove-button:hover { 
+    background-color: #B22222; 
+}
 
-/* =========================
-    👥 CLIENTES
-========================= */
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: var(--color-background-light);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.inventory-table th, .inventory-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-border);
+    color: var(--color-white);
+}
+
+.inventory-table th {
+    background-color: var(--color-primary);
+    color: var(--color-secondary);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.inventory-table tr:hover {
+    background-color: #333333;
+}
+
+.inventory-table .actions-icons button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin: 0 5px;
+    padding: 0;
+}
+
+.inventory-table .actions-icons .edit-icon {
+    color: var(--color-secondary);
+}
+
+.inventory-table .actions-icons .remove-icon {
+    color: #8B0000;
+}
+
 .clientes-section {
     flex: 1;
     background-color: var(--color-background-light);
     padding: 25px;
     overflow-y: auto;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    color: var(--color-white);
 }
 
 .clientes-list {
@@ -459,32 +543,30 @@ input:focus {
     gap: 10px;
 }
 
-/* =========================
-    🧮 CARRINHO (SIDE PANEL)
-========================= */
 .side-panel {
     flex: 1;
     background-color: var(--color-background-light);
     padding: 50px 25px 25px 25px; 
     overflow-y: auto;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     min-height: 400px;
     position: relative;
+    color: var(--color-white);
 }
 
 .side-panel h2, .side-panel h3 {
     margin-top: 0;
     margin-bottom: 20px;
     text-align: left;
+    color: var(--color-white);
 }
 
 .close-cart-button {
     position: absolute;
-    /* CORREÇÃO: Aumentado o valor de top e right para 20px (base + margem) */
     top: 20px; 
     right: 20px; 
-    background-color: #f44336;
+    background-color: #8B0000;
     color: var(--color-white);
     padding: 5px 10px !important;
     border-radius: 5px;
@@ -496,10 +578,15 @@ input:focus {
     flex-direction: column;
     gap: 5px;
 }
+/* No seu index.css */
+.remove-button { 
+    background-color: #8B0000; /* Vermelho escuro para remoção/limpeza */
+    color: var(--color-white); 
+}
+.remove-button:hover { 
+    background-color: #B22222; 
+}
 
-/* =========================
-    ⚙️ RESPONSIVIDADE
-========================= */
 @media (max-width: 992px) {
     .dashboard-body-container {
         flex-direction: column;
