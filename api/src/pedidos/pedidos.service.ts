@@ -10,103 +10,125 @@ import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
 export class PedidosService implements OnModuleInit {
-  private readonly logger = new Logger(PedidosService.name);
+    private readonly logger = new Logger(PedidosService.name);
 
-  constructor(
-    @InjectRepository(Pedido)
-    private readonly pedidoRepo: Repository<Pedido>,
+    constructor(
+        @InjectRepository(Pedido)
+        private readonly pedidoRepo: Repository<Pedido>,
 
-    @InjectRepository(Carrinho)
-    private readonly carrinhoRepo: Repository<Carrinho>,
+        @InjectRepository(Carrinho)
+        private readonly carrinhoRepo: Repository<Carrinho>,
 
-    @InjectRepository(ItemCarrinho)
-    private readonly itemRepo: Repository<ItemCarrinho>,
+        @InjectRepository(ItemCarrinho)
+        private readonly itemRepo: Repository<ItemCarrinho>,
 
-    @InjectRepository(Produto)
-    private readonly produtoRepo: Repository<Produto>,
+        @InjectRepository(Produto)
+        private readonly produtoRepo: Repository<Produto>,
 
-    @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
-  ) {}
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
+    ) {}
 
-  async onModuleInit() {
-    await this.kafkaClient.connect();
-  }
-
-  async criarPedido(usuarioId: number): Promise<Pedido> {
-    const carrinho = await this.carrinhoRepo.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
-
-    if (!carrinho || carrinho.itens.length === 0)
-      throw new NotFoundException('Carrinho vazio ou não encontrado');
-
-    const usuario = carrinho.usuario;
-    const totalNumber = Number(carrinho.total);
-
-    const pedido = this.pedidoRepo.create({
-      usuario: { id: usuarioId } as Usuario,
-      total: carrinho.total,
-      finalizado: true,
-      itens: carrinho.itens.map(item => ({
-        produto: item.produto,
-        quantidade: item.quantidade,
-        subtotal: item.subtotal,
-      })),
-    });
-
-    const salvo = await this.pedidoRepo.save(pedido);
-
-    // Atualiza estoque
-    for (const item of carrinho.itens) {
-      const produto = await this.produtoRepo.findOne({ where: { id: item.produto.id } });
-      if (!produto) continue;
-      produto.estoque -= item.quantidade;
-      await this.produtoRepo.save(produto);
-      this.kafkaClient.emit('estoque.atualizado', { produtoId: produto.id, estoqueAtual: produto.estoque });
+    async onModuleInit() {
+        await this.kafkaClient.connect();
     }
 
-    // Limpa carrinho
-    carrinho.itens = [];
-    carrinho.total = 0;
-    await this.carrinhoRepo.save(carrinho);
+    async criarPedido(usuarioId: number): Promise<Pedido> {
+        const carrinho = await this.carrinhoRepo.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
 
-    // Evento Kafka pedido finalizado
-    this.kafkaClient.emit('pedido.finalizado', {
-      usuarioId,
-      pedidoId: salvo.id,
-      total: totalNumber,
-    });
+        if (!carrinho || carrinho.itens.length === 0)
+            throw new NotFoundException('Carrinho vazio ou não encontrado');
 
-    return salvo;
-  }
+        const usuario = carrinho.usuario;
+        const totalNumber = Number(carrinho.total);
 
-  async findAll(): Promise<Pedido[]> {
-    return this.pedidoRepo.find({ relations: ['usuario', 'itens', 'itens.produto'] });
-  }
+        const pedido = this.pedidoRepo.create({
+            usuario: { id: usuarioId } as Usuario,
+            total: carrinho.total,
+            finalizado: true,
+            itens: carrinho.itens.map(item => ({
+                produto: item.produto,
+                quantidade: item.quantidade,
+                subtotal: item.subtotal,
+            })),
+        });
 
-  async findOne(id: number): Promise<Pedido> {
-    const pedido = await this.pedidoRepo.findOne({
-      where: { id },
-      relations: ['usuario', 'itens', 'itens.produto'],
-    });
-    if (!pedido) throw new NotFoundException(`Pedido com ID ${id} não encontrado`);
-    return pedido;
-  }
+        const salvo = await this.pedidoRepo.save(pedido);
 
-  async update(id: number, data: Partial<Pedido>): Promise<Pedido> {
-    const pedido = await this.findOne(id);
-    Object.assign(pedido, data);
-    const salvo = await this.pedidoRepo.save(pedido);
-    this.kafkaClient.emit('pedido.atualizado', { pedidoId: salvo.id, ...data });
-    return salvo;
-  }
+        for (const item of carrinho.itens) {
+            const produto = await this.produtoRepo.findOne({ where: { id: item.produto.id } });
+            if (!produto) continue;
+            produto.estoque -= item.quantidade;
+            await this.produtoRepo.save(produto);
+            this.kafkaClient.emit('estoque.atualizado', { produtoId: produto.id, estoqueAtual: produto.estoque });
+        }
 
-  async remove(id: number): Promise<void> {
-    const pedido = await this.findOne(id);
-    await this.pedidoRepo.remove(pedido);
-    this.kafkaClient.emit('pedido.removido', { pedidoId: id });
-  }
+        carrinho.itens = [];
+        carrinho.total = 0;
+        await this.carrinhoRepo.save(carrinho);
+
+        this.kafkaClient.emit('pedido.finalizado', {
+            usuarioId,
+            pedidoId: salvo.id,
+            total: totalNumber,
+        });
+
+        return salvo;
+    }
+
+    async findByUsuarioId(usuarioId: number): Promise<any[]> {
+        const pedidos = await this.pedidoRepo.find({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto'],
+            // CORREÇÃO: Usando 'id' como coluna de ordenação segura
+            order: { id: 'DESC' } 
+        });
+
+        const today = new Date().toLocaleDateString('pt-BR');
+
+        return pedidos.map(pedido => ({
+            id: pedido.id,
+            // Fallback: Tenta obter a data do campo (dataPedido, createdAt, etc.), se falhar usa a data de hoje.
+            data: new Date(pedido['dataPedido'] || pedido['createdAt'] || today).toLocaleDateString('pt-BR'),
+            total: Number(pedido.total),
+            itens: pedido.itens.map(item => ({
+                id: item.produto.id,
+                nome: item.produto.nome,
+                quantidade: item.quantidade,
+            }))
+        }));
+    }
+
+    async findAll(): Promise<Pedido[]> {
+        return this.pedidoRepo.find({ 
+            relations: ['usuario', 'itens', 'itens.produto'], 
+            // CORREÇÃO: Usando 'id' como coluna de ordenação segura
+            order: { id: 'DESC' }
+        });
+    }
+
+    async findOne(id: number): Promise<Pedido> {
+        const pedido = await this.pedidoRepo.findOne({
+            where: { id },
+            relations: ['usuario', 'itens', 'itens.produto'],
+        });
+        if (!pedido) throw new NotFoundException(`Pedido com ID ${id} não encontrado`);
+        return pedido;
+    }
+
+    async update(id: number, data: Partial<Pedido>): Promise<Pedido> {
+        const pedido = await this.findOne(id);
+        Object.assign(pedido, data);
+        const salvo = await this.pedidoRepo.save(pedido);
+        this.kafkaClient.emit('pedido.atualizado', { pedidoId: salvo.id, ...data });
+        return salvo;
+    }
+
+    async remove(id: number): Promise<void> {
+        const pedido = await this.findOne(id);
+        await this.pedidoRepo.remove(pedido);
+        this.kafkaClient.emit('pedido.removido', { pedidoId: id });
+    }
 }
-
-

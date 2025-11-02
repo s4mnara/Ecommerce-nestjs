@@ -9,127 +9,162 @@ import { KafkaProducer } from '../kafka/kafka.producer';
 
 @Injectable()
 export class CarrinhoService {
-  constructor(
-    @InjectRepository(Carrinho)
-    private readonly carrinhoRepository: Repository<Carrinho>,
+    constructor(
+        @InjectRepository(Carrinho)
+        private readonly carrinhoRepository: Repository<Carrinho>,
 
-    @InjectRepository(Produto)
-    private readonly produtoRepository: Repository<Produto>,
+        @InjectRepository(Produto)
+        private readonly produtoRepository: Repository<Produto>,
 
-    @InjectRepository(Usuario)
-    private readonly usuarioRepository: Repository<Usuario>,
+        @InjectRepository(Usuario)
+        private readonly usuarioRepository: Repository<Usuario>,
 
-    @InjectRepository(ItemCarrinho)
-    private readonly itemCarrinhoRepository: Repository<ItemCarrinho>,
+        @InjectRepository(ItemCarrinho)
+        private readonly itemCarrinhoRepository: Repository<ItemCarrinho>,
 
-    private readonly kafkaProducer: KafkaProducer,
-  ) {}
+        private readonly kafkaProducer: KafkaProducer,
+    ) {}
 
-  async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number) {
-    const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
-    if (!usuario) throw new NotFoundException('Usuário não encontrado.');
+    async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number) {
+        const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+        if (!usuario) throw new NotFoundException('Usuário não encontrado.');
 
-    const produto = await this.produtoRepository.findOne({ where: { id: produtoId } });
-    if (!produto) throw new NotFoundException('Produto não encontrado.');
+        const produto = await this.produtoRepository.findOne({ where: { id: produtoId } });
+        if (!produto) throw new NotFoundException('Produto não encontrado.');
 
-    //  Busca ou cria o carrinho automaticamente
-    let carrinho = await this.carrinhoRepository.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
+        let carrinho = await this.carrinhoRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
 
-    if (!carrinho) {
-      carrinho = this.carrinhoRepository.create({ usuario, itens: [] });
-      carrinho = await this.carrinhoRepository.save(carrinho);
+        if (!carrinho) {
+            carrinho = this.carrinhoRepository.create({ usuario, itens: [] });
+            carrinho = await this.carrinhoRepository.save(carrinho);
+        }
+
+        let item = carrinho.itens.find((i) => i.produto.id === produto.id);
+
+        if (item) {
+            item.quantidade += quantidade;
+            item.subtotal = item.quantidade * produto.preco;
+            await this.itemCarrinhoRepository.save(item);
+        } else {
+            const novoItem = this.itemCarrinhoRepository.create({
+                carrinho,
+                produto,
+                quantidade,
+                subtotal: produto.preco * quantidade,
+            });
+            await this.itemCarrinhoRepository.save(novoItem);
+            carrinho.itens.push(novoItem);
+        }
+
+        const totalAtual = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+        carrinho.total = totalAtual;
+        await this.carrinhoRepository.save(carrinho);
+
+        await this.kafkaProducer.enviarProdutoAdicionado(usuario.id, produto.id, quantidade, totalAtual);
+
+        return this.obterCarrinho(usuarioId);
+    }
+    
+    async atualizarQuantidade(usuarioId: number, produtoId: number, novaQuantidade: number) {
+        if (novaQuantidade <= 0) {
+            return this.removerProduto(usuarioId, produtoId);
+        }
+
+        let carrinho = await this.carrinhoRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
+
+        if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
+
+        let item = carrinho.itens.find((i) => i.produto.id === produtoId);
+        if (!item) throw new NotFoundException('Produto não está no carrinho.');
+
+        item.quantidade = novaQuantidade;
+        item.subtotal = item.quantidade * item.produto.preco;
+        await this.itemCarrinhoRepository.save(item);
+
+        carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+        await this.carrinhoRepository.save(carrinho);
+
+        // Opcional: emitir evento Kafka de atualização
+
+        return this.obterCarrinho(usuarioId);
     }
 
-    //  Verifica se o produto já está no carrinho
-    let item = carrinho.itens.find((i) => i.produto.id === produto.id);
+    async removerProduto(usuarioId: number, produtoId: number) {
+        const carrinho = await this.carrinhoRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
 
-    if (item) {
-      item.quantidade += quantidade;
-      item.subtotal = item.quantidade * produto.preco;
-      await this.itemCarrinhoRepository.save(item);
-    } else {
-      //  Cria o item completo com subtotal
-      const novoItem = this.itemCarrinhoRepository.create({
-        carrinho,
-        produto,
-        quantidade,
-        subtotal: produto.preco * quantidade,
-      });
-      await this.itemCarrinhoRepository.save(novoItem);
-      carrinho.itens.push(novoItem);
+        if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
+
+        const item = carrinho.itens.find((i) => i.produto.id === produtoId);
+        if (!item) throw new NotFoundException('Produto não está no carrinho.');
+
+        await this.itemCarrinhoRepository.remove(item);
+
+        carrinho.itens = carrinho.itens.filter((i) => i.id !== item.id);
+        carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+        await this.carrinhoRepository.save(carrinho);
+
+        await this.kafkaProducer.enviarProdutoRemovido(usuarioId, produtoId, carrinho.total);
+
+        return this.obterCarrinho(usuarioId);
     }
 
-    //  Atualiza o total
-    const totalAtual = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
-    carrinho.total = totalAtual;
-    await this.carrinhoRepository.save(carrinho);
+    async limparCarrinho(usuarioId: number) {
+        const carrinho = await this.carrinhoRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'usuario'],
+        });
 
-    //  Emite evento Kafka
-    await this.kafkaProducer.enviarProdutoAdicionado(usuario.id, produto.id, quantidade, totalAtual);
+        if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
 
-    return { message: 'Produto adicionado ao carrinho com sucesso!', carrinho };
-  }
+        await this.itemCarrinhoRepository.remove(carrinho.itens);
+        carrinho.itens = [];
+        carrinho.total = 0;
+        await this.carrinhoRepository.save(carrinho);
 
-  async removerProduto(usuarioId: number, produtoId: number) {
-    const carrinho = await this.carrinhoRepository.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
+        await this.kafkaProducer.enviarCarrinhoLimpo(usuarioId);
 
-    if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
-
-    const item = carrinho.itens.find((i) => i.produto.id === produtoId);
-    if (!item) throw new NotFoundException('Produto não está no carrinho.');
-
-    await this.itemCarrinhoRepository.remove(item);
-
-    carrinho.itens = carrinho.itens.filter((i) => i.id !== item.id);
-    carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
-    await this.carrinhoRepository.save(carrinho);
-
-    //  Kafka
-    await this.kafkaProducer.enviarProdutoRemovido(usuarioId, produtoId, carrinho.total);
-
-    return { message: 'Produto removido do carrinho com sucesso.', carrinho };
-  }
-
-  async limparCarrinho(usuarioId: number) {
-    const carrinho = await this.carrinhoRepository.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'usuario'],
-    });
-
-    if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
-
-    await this.itemCarrinhoRepository.remove(carrinho.itens);
-    carrinho.itens = [];
-    carrinho.total = 0;
-    await this.carrinhoRepository.save(carrinho);
-
-    //  Kafka
-    await this.kafkaProducer.enviarCarrinhoLimpo(usuarioId);
-
-    return { message: 'Carrinho limpo com sucesso.' };
-  }
-
-  async obterCarrinho(usuarioId: number) {
-    let carrinho = await this.carrinhoRepository.findOne({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
-
-    if (!carrinho) {
-      const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
-      if (!usuario) throw new NotFoundException('Usuário não encontrado.');
-
-      carrinho = this.carrinhoRepository.create({ usuario, itens: [], total: 0 });
-      carrinho = await this.carrinhoRepository.save(carrinho);
+        return { message: 'Carrinho limpo com sucesso.', total: 0, itens: [] };
     }
 
-    return carrinho;
-  }
+    async obterCarrinho(usuarioId: number) {
+        let carrinho = await this.carrinhoRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: ['itens', 'itens.produto', 'usuario'],
+        });
+
+        if (!carrinho) {
+            const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+            if (!usuario) throw new NotFoundException('Usuário não encontrado.');
+
+            carrinho = this.carrinhoRepository.create({ usuario, itens: [], total: 0 });
+            carrinho = await this.carrinhoRepository.save(carrinho);
+        }
+
+        const itensFormatados = carrinho.itens.map(item => ({
+            id: item.produto.id,
+            nome: item.produto.nome,
+            preco: parseFloat(item.produto.preco.toString()), 
+            quantidade: item.quantidade,
+            itemId: item.id, 
+        }));
+
+        const totalCalculado = itensFormatados.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+
+        return {
+            id: carrinho.id,
+            usuarioId: usuarioId,
+            itens: itensFormatados,
+            total: totalCalculado.toFixed(2),
+        };
+    }
 }
 

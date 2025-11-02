@@ -18,10 +18,12 @@ html, body, #root {
 
 body {
     position: relative;
+    min-height: 100vh;
     background-image:url('../public/assets/background.jpeg'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    background-attachment: fixed;
     color: var(--color-white); 
 }
 
@@ -34,14 +36,17 @@ body::before {
 }
 
 .app-wrapper {
-    min-height: 100vh;
+    height: 100%;
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .container {
     position: relative;
     max-width: 500px;
-    margin: 50px auto;
+    margin: 0 20px;
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.5);
@@ -254,14 +259,14 @@ input:focus, select:focus {
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    filter: none; /* Alterado para ícones pretos */
+    filter: none;
 }
 
 .icon-img-white {
     width: 25px;
     height: 25px;
     flex-shrink: 0;
-    filter: none; /* Alterado para ícones pretos */
+    filter: none;
 }
 
 .logout-desktop {
@@ -321,6 +326,14 @@ input:focus, select:focus {
     width: 100%;
     margin: 0 auto;
     align-items: flex-start;
+}
+
+.space-for-panel {
+    padding-right: 370px;
+    flex: none; 
+    max-width: 100%; 
+    width: 100%; 
+    box-sizing: border-box;
 }
 
 .sidebar {
@@ -555,6 +568,19 @@ input:focus, select:focus {
     color: var(--color-white);
 }
 
+.side-panel-fixed {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 350px;
+    max-width: 90%;
+    z-index: 100;
+    padding-top: 80px;
+    background-color: var(--color-background-light); 
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.5);
+}
+
 .side-panel h2, .side-panel h3 {
     margin-top: 0;
     margin-bottom: 20px;
@@ -578,9 +604,9 @@ input:focus, select:focus {
     flex-direction: column;
     gap: 5px;
 }
-/* No seu index.css */
+
 .remove-button { 
-    background-color: #8B0000; /* Vermelho escuro para remoção/limpeza */
+    background-color: #8B0000;
     color: var(--color-white); 
 }
 .remove-button:hover { 
@@ -597,6 +623,15 @@ input:focus, select:focus {
 
     .side-panel {
         padding: 50px 15px 15px 15px;
+    }
+    
+    .side-panel-fixed {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .space-for-panel {
+        padding-right: 0;
     }
 }
 

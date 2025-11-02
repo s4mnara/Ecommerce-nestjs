@@ -1,38 +1,38 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, ParseIntPipe } from '@nestjs/common';
 import { PedidosService } from './pedidos.service';
 import { Pedido } from '../entity/pedido.entity';
 
 @Controller('pedidos')
 export class PedidosController {
-  constructor(private readonly pedidosService: PedidosService) {}
+    constructor(private readonly pedidosService: PedidosService) {}
 
-  // Criar pedido a partir do carrinho do usuário
-  @Post('usuario/:usuarioId')
-  criarPedido(@Param('usuarioId') usuarioId: number) {
-    return this.pedidosService.criarPedido(usuarioId);
-  }
+    @Post('usuario/:usuarioId')
+    criarPedido(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
+        return this.pedidosService.criarPedido(usuarioId);
+    }
 
-  // Listar todos os pedidos
-  @Get()
-  findAll() {
-    return this.pedidosService.findAll();
-  }
+    @Get('usuario/:usuarioId')
+    findByUsuarioId(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
+        return this.pedidosService.findByUsuarioId(usuarioId);
+    }
 
-  // Buscar pedido por ID
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.pedidosService.findOne(id);
-  }
+    @Get()
+    findAll() {
+        return this.pedidosService.findAll();
+    }
 
-  // Atualizar pedido (ex.: alterar status)
-  @Put(':id')
-  update(@Param('id') id: number, @Body() pedido: Partial<Pedido>) {
-    return this.pedidosService.update(id, pedido);
-  }
+    @Get(':id')
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.pedidosService.findOne(id);
+    }
 
-  // Remover pedido
-  @Delete(':id')
-  remove(@Param('id') id: number) {
-    return this.pedidosService.remove(id);
-  }
+    @Put(':id')
+    update(@Param('id', ParseIntPipe) id: number, @Body() pedido: Partial<Pedido>) {
+        return this.pedidosService.update(id, pedido);
+    }
+
+    @Delete(':id')
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.pedidosService.remove(id);
+    }
 }
