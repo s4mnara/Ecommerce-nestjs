@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import "../index.css";
 
-// Componente Tabela de Itens (para reutilização e melhor separação)
+const BASE_IMAGE_URL = 'http://localhost:8080/uploads/';
+
 const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
     <div className="produto-form-panel" style={{ marginTop: '20px' }}>
         <h3>Itens no Inventário</h3>
@@ -10,6 +11,7 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Imagem</th>
                     <th>Nome</th>
                     <th>Descrição</th>
                     <th>Preço</th>
@@ -21,21 +23,58 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
                 {produtos.map((p) => (
                     <tr key={p.id}>
                         <td>{p.id}</td>
+                        <td style={{ textAlign: 'center' }}>
+                            {p.imagem && (
+                                <img
+                                    src={`${BASE_IMAGE_URL}${p.imagem}`}
+                                    alt={p.nome}
+                                    className="produto-imagem-tabela"
+                                    style={{ 
+                                        width: "50px", 
+                                        height: "50px", 
+                                        objectFit: "cover", 
+                                        borderRadius: "5px" 
+                                    }}
+                                />
+                            )}
+                        </td>
                         <td>{p.nome}</td>
                         <td>{p.descricao}</td>
                         <td>R$ {parseFloat(p.preco).toFixed(2)}</td>
                         <td>{p.estoque}</td>
                         <td className="card-actions actions-icons">
-                            <button 
-                                onClick={() => editarProduto(p)} 
-                                className="button edit-button"
-                            >
-                                Editar
-                            </button>
-                            <button 
-                                onClick={() => removerProduto(p.id)} 
-                                className="button remove-button"
-                            >
+                            <button onClick={() => editarProduto(p)} className="button edit-button">Editar</button>
+                            <button onClick={() => removerProduto(p.id)} className="button remove-button">Remover</button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+);
+
+const UsuariosTable = ({ usuarios, removerUsuario }) => (
+    <div className="produto-form-panel" style={{ marginTop: '20px' }}>
+        <h3>Usuários Cadastrados</h3>
+        <table className="inventory-table" width="100%">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Função</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {usuarios.map(u => (
+                    <tr key={u.id}>
+                        <td>{u.id}</td>
+                        <td>{u.nome}</td>
+                        <td>{u.email}</td>
+                        <td>{u.role || "cliente"}</td>
+                        <td>
+                            <button onClick={() => removerUsuario(u.id)} className="button remove-button">
                                 Remover
                             </button>
                         </td>
@@ -46,75 +85,99 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
     </div>
 );
 
+const LogsPanel = ({ logs }) => (
+    <div className="produto-form-panel" style={{ marginTop: '20px' }}>
+        <h3>Logs de Acesso</h3>
+        {logs.length === 0 ? (
+            <p>Nenhum log encontrado.</p>
+        ) : (
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+                {logs.map((log, i) => (
+                    <li key={i} style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        padding: '10px',
+                        marginBottom: '8px',
+                        borderRadius: '8px'
+                    }}>
+                        <strong>{log.usuario || "Desconhecido"}</strong> — {log.acao}
+                        <br />
+                        <small>{new Date(log.data).toLocaleString()}</small>
+                    </li>
+                ))}
+            </ul>
+        )}
+    </div>
+);
+
 
 function AdminDashboard({ onLogout }) {
     const [produtos, setProdutos] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
+    const [logs, setLogs] = useState([]);
     const [form, setForm] = useState({
         id: null,
         nome: '',
         descricao: '',
         preco: '',
         estoque: '',
-        imagem: null // Novo campo para a imagem
+        imagem: null
     });
     const [editando, setEditando] = useState(false);
-    // Removemos 'Inventário' do state, pois não é mais uma opção de navegação
-    const [activeMenu, setActiveMenu] = useState('Dashboard'); 
-    
-    // Simplificada a saudação conforme pedido
-    const adminName = "Admin"; 
+    const [activeMenu, setActiveMenu] = useState('Dashboard');
+    const adminName = "Admin";
 
     useEffect(() => {
-        carregarProdutos();
-    }, []);
+        if (activeMenu === 'Dashboard') carregarProdutos();
+        if (activeMenu === 'Usuários') carregarUsuarios();
+        if (activeMenu === 'Logs') carregarLogs();
+    }, [activeMenu]);
 
     const carregarProdutos = async () => {
         try {
             const res = await api.get('/produtos');
-            const data = res.data.map(p => ({
-                ...p,
-                preco: String(p.preco),
-                estoque: String(p.estoque)
-            }));
-            setProdutos(data);
+            setProdutos(res.data);
         } catch (err) {
             console.error('Erro ao carregar produtos:', err);
         }
     };
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+    const carregarUsuarios = async () => {
+        try {
+            const res = await api.get('/usuarios');
+            setUsuarios(res.data);
+        } catch (err) {
+            console.error('Erro ao carregar usuários:', err);
+        }
     };
 
-    // Novo manipulador para o campo de arquivo
-    const handleImageChange = (e) => {
-        setForm({ ...form, imagem: e.target.files[0] });
+    const carregarLogs = async () => {
+        try {
+            const res = await api.get('/logs');
+            setLogs(res.data);
+        } catch (err) {
+            console.error('Erro ao carregar logs:', err);
+        }
     };
+
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleImageChange = (e) => setForm({ ...form, imagem: e.target.files[0] });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        // Crie um FormData para enviar o arquivo
         const formData = new FormData();
         formData.append('nome', form.nome);
         formData.append('descricao', form.descricao);
         formData.append('preco', parseFloat(form.preco));
         formData.append('estoque', parseInt(form.estoque));
+        if (form.imagem) formData.append('imagem', form.imagem);
         
-        // Anexar a imagem, se existir
-        if (form.imagem) {
-            formData.append('imagem', form.imagem);
-        }
-
         try {
             if (editando) {
-                // Para PUT com arquivos, use o formData
                 await api.put(`/produtos/${form.id}`, formData);
             } else {
-                // Para POST com arquivos, use o formData
                 await api.post('/produtos', formData);
             }
-            // Resetar o formulário
+            
             setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null });
             setEditando(false);
             carregarProdutos();
@@ -124,9 +187,12 @@ function AdminDashboard({ onLogout }) {
     };
 
     const editarProduto = (produto) => {
-        // Ao editar, não preenchemos o campo 'imagem' com o path (por segurança e funcionalidade), 
-        // e deixamos 'imagem: null' para que o usuário possa re-selecionar
-        setForm({ ...produto, imagem: null, preco: String(produto.preco), estoque: String(produto.estoque) });
+        setForm({ 
+            ...produto, 
+            imagem: null,
+            preco: String(produto.preco), 
+            estoque: String(produto.estoque) 
+        });
         setEditando(true);
     };
 
@@ -139,13 +205,22 @@ function AdminDashboard({ onLogout }) {
             console.error('Erro ao remover produto:', err);
         }
     };
-    
+
+    const removerUsuario = async (id) => {
+        if (!window.confirm("Remover este usuário permanentemente?")) return;
+        try {
+            await api.delete(`/usuarios/${id}`);
+            carregarUsuarios();
+        } catch (err) {
+            console.error('Erro ao remover usuário:', err);
+        }
+    };
+
     const Sidebar = () => (
         <nav className="sidebar">
             <a href="#" className={activeMenu === 'Dashboard' ? 'active' : ''} onClick={() => setActiveMenu('Dashboard')}>
-                <i className="fas fa-tachometer-alt"></i> Dashboard
+                <i className="fas fa-box"></i> Produtos
             </a>
-            {/* O item 'Inventário' foi removido daqui */}
             <a href="#" className={activeMenu === 'Usuários' ? 'active' : ''} onClick={() => setActiveMenu('Usuários')}>
                 <i className="fas fa-users"></i> Usuários
             </a>
@@ -158,19 +233,22 @@ function AdminDashboard({ onLogout }) {
         </nav>
     );
 
-    // Texto para o campo de upload
-    const fileName = form.imagem ? form.imagem.name : 'Nenhum arquivo selecionado';
+    let fileName = '';
+    if (form.imagem) {
+        fileName = form.imagem.name;
+    } else if (editando && produtos.find(p => p.id === form.id)?.imagem) {
+        fileName = 'Arquivo atual: ' + produtos.find(p => p.id === form.id).imagem;
+    } else {
+        fileName = 'Nenhum arquivo selecionado';
+    }
+
 
     return (
         <div className="admin-dashboard">
             <header className="dashboard-header" style={{ justifyContent: 'space-between' }}>
                 <div className="client-greeting-group">
-                    <img
-                        src="/assets/logoamarela.png"
-                        alt="Gotham Lock Logo"
-                        className="client-logo-header"
-                    />
-                    <h2 className="dashboard-title">Gerenciamento de Inventário</h2>
+                    <img src="/assets/logoamarela.png" alt="Logo" className="client-logo-header" />
+                    <h2 className="dashboard-title">{activeMenu}</h2>
                 </div>
                 <div className="client-greeting-group">
                     Bem-vindo(a), <strong style={{color: 'var(--color-secondary)'}}>{adminName}</strong>
@@ -178,96 +256,54 @@ function AdminDashboard({ onLogout }) {
             </header>
 
             <div className="dashboard-body-container">
-                <Sidebar /> 
+                <Sidebar />
 
                 <div className="produtos-section-wrapper main-content-full">
-                    
-                    <div className="produto-form-panel">
-                        <div className="form-header" style={{ borderBottom: '2px solid var(--color-secondary)' }}>
-                           <h3 style={{ margin: '0', color: 'var(--color-white)', textAlign: 'left' }}>
-                             {editando ? '✏️ Editar Item' : '➕ Cadastrar Novo Item'}
-                           </h3>
-                        </div>
-                        
-                        <form onSubmit={handleSubmit} style={{ gap: '15px' }} encType="multipart/form-data">
-                            
-                            {/* Linha 1: Nome do Item */}
-                            <label style={{ color: 'var(--color-white)', fontWeight: 'bold' }}>Nome do Item</label>
-                            <input type="text" name="nome" placeholder="Nome do Item" value={form.nome} onChange={handleChange} required />
-                            
-                            {/* Linha 2: Descrição */}
-                            <label style={{ color: 'var(--color-white)', fontWeight: 'bold' }}>Descrição</label>
-                            <input type="text" name="descricao" placeholder="Descrição (Opcional)" value={form.descricao} onChange={handleChange} />
+                    {activeMenu === 'Dashboard' && (
+                        <>
+                            <div className="produto-form-panel">
+                                <h3>{editando ? 'Editar Produto' : 'Adicionar Novo Produto'}</h3>
+                                <form onSubmit={handleSubmit} encType="multipart/form-data">
+                                    <label>Nome</label>
+                                    <input type="text" name="nome" value={form.nome} onChange={handleChange} required />
 
-                            {/* Linha 3: Imagem do Produto (Campo recuperado) */}
-                            <label style={{ color: 'var(--color-white)', fontWeight: 'bold' }}>Foto do Produto</label>
-                            <div className="file-input-group">
-                                <label htmlFor="imagem-upload" className="custom-file-upload-label">
-                                    {fileName}
-                                </label>
-                                <input 
-                                    id="imagem-upload"
-                                    type="file" 
-                                    name="imagem" 
-                                    accept="image/*"
-                                    onChange={handleImageChange} 
-                                    className="hidden-file-input"
-                                />
-                                {form.imagem && (
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setForm({...form, imagem: null})}
-                                        className="button remove-button"
-                                        style={{ padding: '8px 15px', fontSize: '14px', margin: '0 5px' }}
-                                    >
-                                        X
-                                    </button>
-                                )}
+                                    <label>Descrição</label>
+                                    <input type="text" name="descricao" value={form.descricao} onChange={handleChange} />
+
+                                    <label>Imagem</label>
+                                    <div className="file-input-group">
+                                        <label htmlFor="imagem-upload" className="custom-file-upload-label">{fileName}</label>
+                                        <input 
+                                            id="imagem-upload" 
+                                            type="file" 
+                                            name="imagem" 
+                                            accept="image/*" 
+                                            onChange={handleImageChange} 
+                                            className="hidden-file-input" 
+                                        />
+                                    </div>
+
+                                    <label>Preço</label>
+                                    <input type="number" step="0.01" name="preco" value={form.preco} onChange={handleChange} required />
+
+                                    <label>Estoque</label>
+                                    <input type="number" name="estoque" value={form.estoque} onChange={handleChange} required />
+
+                                    <button type="submit" className="button submit-button">{editando ? 'Salvar Alterações' : 'Salvar Item'}</button>
+                                </form>
                             </div>
 
-                            {/* Linha 4: Preço e Estoque */}
-                            <div style={{display: 'flex', gap: '15px'}}>
-                                <div style={{flex: 1}}>
-                                    <label style={{ color: 'var(--color-white)', fontWeight: 'bold' }}>Preço</label>
-                                    <input type="number" step="0.01" name="preco" placeholder="Preço" value={form.preco} onChange={handleChange} required />
-                                </div>
-                                <div style={{flex: 1}}>
-                                    <label style={{ color: 'var(--color-white)', fontWeight: 'bold' }}>Estoque</label>
-                                    <input type="number" name="estoque" placeholder="Estoque" value={form.estoque} onChange={handleChange} required />
-                                </div>
-                            </div>
-                            
-                            {/* Linha 5: Botões de Ação */}
-                            <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '15px'}}>
-                                {editando && (
-                                    <button type="button" 
-                                            onClick={() => {setEditando(false); setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null });}}
-                                            className="button cancel-button"
-                                    >
-                                        Cancelar
-                                    </button>
-                                )}
-                                <button type="submit" className="button submit-button save-item-button">
-                                    {editando ? 'Salvar Alterações' : 'Salvar Item'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                            <InventoryTable produtos={produtos} editarProduto={editarProduto} removerProduto={removerProduto} />
+                        </>
+                    )}
 
-                    {/* Tabela de Itens no Inventário */}
-                    <InventoryTable 
-                        produtos={produtos} 
-                        editarProduto={editarProduto} 
-                        removerProduto={removerProduto} 
-                    />
+                    {activeMenu === 'Usuários' && <UsuariosTable usuarios={usuarios} removerUsuario={removerUsuario} />}
+                    {activeMenu === 'Logs' && <LogsPanel logs={logs} />}
                 </div>
-                
             </div>
-            
+
             <footer className="dashboard-footer client-footer">
-                <button onClick={onLogout} className="button footer-button logout-mobile">
-                    Logout
-                </button>
+                <button onClick={onLogout} className="button footer-button logout-mobile">Logout</button>
             </footer>
         </div>
     );

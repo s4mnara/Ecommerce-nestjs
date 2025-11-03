@@ -1,9 +1,25 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, NotFoundException, UseGuards, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  NotFoundException,
+  UseGuards,
+  ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { ProdutosService } from './produtos.service';
 import { Produto } from '../entity/produto.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('produtos')
 export class ProdutosController {
@@ -12,7 +28,25 @@ export class ProdutosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
-  create(@Body() produto: Partial<Produto>) {
+  @UseInterceptors(
+    FileInterceptor('imagem', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async create(
+    @Body() produto: Partial<Produto>,
+    @UploadedFile() imagem?: Express.Multer.File,
+  ) {
+    if (imagem) {
+      produto.imagem = imagem.filename;
+    }
     return this.produtosService.create(produto);
   }
 
@@ -29,7 +63,27 @@ export class ProdutosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id')
-  async update(@Param('id', ParseIntPipe) id: number, @Body() produto: Partial<Produto>) {
+  @UseInterceptors(
+    FileInterceptor('imagem', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() produto: Partial<Produto>,
+    @UploadedFile() imagem?: Express.Multer.File,
+  ) {
+    if (imagem) {
+      produto.imagem = imagem.filename;
+    }
+
     const atualizado = await this.produtosService.update(id, produto);
     if (!atualizado) {
       throw new NotFoundException('Produto não encontrado ou nenhum campo para atualizar');

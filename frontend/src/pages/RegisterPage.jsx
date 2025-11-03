@@ -39,7 +39,7 @@ function RegisterPage() {
       <div className="form-header">
         <h1>Criar Conta</h1>
         <a href="#" onClick={() => navigate("/login")} className="forgot-password-link">
-          Fazer login
+          
         </a>
       </div>
 

@@ -9,6 +9,12 @@ import { PedidosModule } from './pedidos/pedidos.module';
 import { ProdutosModule } from './produtos/produtos.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { PagamentoModule } from './pagamento/pagamento.module';
+import { Usuario } from './entity/usuario.entity';
+import { Produto } from './entity/produto.entity';
+import { Carrinho } from './entity/carrinho.entity';
+import { Pedido } from './entity/pedido.entity';
+import {ItemCarrinho } from './entity/item-carrinho.entity';
+import { ItemPedido } from './entity/item-pedido.entity';
 
 @Module({
     imports: [
@@ -20,7 +26,14 @@ import { PagamentoModule } from './pagamento/pagamento.module';
             username: process.env.DB_USERNAME || 'postgres',
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_DATABASE || 'loja_db',
-            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            entities: [
+                Usuario,
+                Produto,
+                Carrinho,
+                Pedido,
+                ItemCarrinho,
+                ItemPedido,
+            ],
             synchronize: true, 
         }),
         AuthModule,

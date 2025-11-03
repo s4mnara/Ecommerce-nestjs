@@ -56,12 +56,6 @@ function ClientDashboard({ onLogout }) {
         }
     };
 
-    useEffect(() => {
-        carregarProdutos();
-        carregarCarrinho();
-        carregarPedidos();
-    }, []);
-
     const carregarProdutos = async () => {
         try {
             const res = await axiosAuth.get("/produtos");
@@ -74,6 +68,12 @@ function ClientDashboard({ onLogout }) {
         }
     };
 
+    useEffect(() => {
+        carregarProdutos();
+        carregarCarrinho();
+        carregarPedidos();
+    }, []);
+
     const handleAddToCart = async (produto) => {
         if (!userId) return alert("Usuário não autenticado.");
         try {
@@ -81,7 +81,9 @@ function ClientDashboard({ onLogout }) {
                 produtoId: produto.id,
                 quantidade: 1,
             });
-            carregarCarrinho(); 
+            carregarCarrinho();
+            setShowCart(true);
+            setShowHistory(false);
         } catch (err) {
             alert("Erro ao adicionar produto ao carrinho.");
             console.error("Erro ao adicionar produto:", err);
@@ -116,7 +118,6 @@ function ClientDashboard({ onLogout }) {
             await axiosAuth.put(`/carrinho/${userId}/atualizar/${produtoId}`, {
                 quantidade: novaQuantidade, 
             });
-            
             carregarCarrinho();
         } catch (err) {
              console.error("Erro ao atualizar quantidade:", err);
@@ -134,43 +135,34 @@ function ClientDashboard({ onLogout }) {
         }
     };
 
-    const handleShowCart = () => {
-        setShowHistory(false);
-        setShowCart((prev) => !prev);
-        if (!showCart) {
-             carregarCarrinho(); 
-        }
-    };
-
-    const handleShowHistory = () => {
-        setShowCart(false);
-        setShowHistory((prev) => !prev);
-        if (!showHistory) {
-             carregarPedidos(); 
-        }
-    };
-
     const finalizarPedido = async () => {
         if (carrinho.length === 0) {
-             alert("O carrinho está vazio.");
-             return;
+              alert("O carrinho está vazio.");
+              return;
         }
         if (!userId) return;
 
         try {
-            // ROTA PARA INICIAR O PAGAMENTO COM O STRIPE
             const res = await axiosAuth.post(`/pagamentos/iniciar/${userId}`);
-            
             const { url } = res.data;
-
-            // REDIRECIONA PARA O CHECKOUT DO STRIPE
             window.location.href = url; 
-            
         } catch (error) {
             console.error("Erro ao iniciar pagamento:", error);
             alert("Erro ao iniciar o processo de pagamento. Verifique o console.");
         }
         setShowCart(false);
+    };
+
+    const handleShowCart = () => {
+        setShowHistory(false);
+        setShowCart((prev) => !prev);
+        if (!showCart) carregarCarrinho();
+    };
+
+    const handleShowHistory = () => {
+        setShowCart(false);
+        setShowHistory((prev) => !prev);
+        if (!showHistory) carregarPedidos();
     };
 
     const produtosFiltrados = produtos.filter(
@@ -183,8 +175,11 @@ function ClientDashboard({ onLogout }) {
         .reduce((acc, item) => item.preco && item.quantidade ? acc + item.preco * item.quantidade : acc, 0)
         .toFixed(2);
 
+    const countCarrinho = carrinho.reduce((acc, item) => item.quantidade ? acc + item.quantidade : acc, 0);
+
     const ProdutoCard = ({ p }) => (
         <div key={p.id} className="produto-card">
+            {p.imagem && <img src={`http://localhost:8080/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
             <h3>{p.nome}</h3>
             <p className="produto-descricao">{p.descricao}</p>
             <p className="produto-preco">R$ {parseFloat(p.preco).toFixed(2)}</p>
@@ -201,7 +196,6 @@ function ClientDashboard({ onLogout }) {
         <div className="cart-container side-panel clients-section side-panel-fixed">
             <h2>🛒 Seu Carrinho</h2>
             <button onClick={() => setShowCart(false)} className="button close-cart-button small-button">Fechar</button> 
-            
             {carrinho.length === 0 ? (
                 <p>Carrinho vazio.</p>
             ) : (
@@ -283,7 +277,6 @@ function ClientDashboard({ onLogout }) {
         <div className="side-panel clients-section side-panel-fixed">
             <h3>📜 Histórico de Pedidos ({history.length})</h3>
             <button onClick={() => setShowHistory(false)} className="button close-cart-button small-button">Fechar</button> 
-
             <div className="clientes-list">
                 {history.length === 0 ? (
                     <p>Você não possui pedidos finalizados.</p>
@@ -304,7 +297,7 @@ function ClientDashboard({ onLogout }) {
     const activePanel = showCart ? <CarrinhoPanel /> : showHistory ? <HistoricoPanel /> : null;
 
     return (
-        <div className="admin-dashboard">
+        <div className="client-dashboard-layout">
             <header className="dashboard-header">
                 <div className="client-greeting-group">
                     <img
@@ -338,9 +331,7 @@ function ClientDashboard({ onLogout }) {
                         alt="Carrinho"
                         className="icon-img"
                     />
-                    <span className="cart-count">
-                        ({carrinho.reduce((acc, item) => item.quantidade ? acc + item.quantidade : acc, 0)})
-                    </span>
+                    <span className="cart-count">({countCarrinho})</span>
                 </button>
 
                 <button onClick={onLogout} className="button icon-button logout-desktop">
@@ -353,7 +344,7 @@ function ClientDashboard({ onLogout }) {
                 </button>
             </header>
 
-            <div className="dashboard-body-container">
+            <div className="dashboard-body-container-client">
                 <div className={`produtos-section-wrapper ${activePanel ? 'space-for-panel' : ''}`}>
                     <div className="produtos-section">
                         <h3>Produtos Disponíveis</h3>
@@ -369,7 +360,7 @@ function ClientDashboard({ onLogout }) {
                 {activePanel}
             </div>
             
-            <footer className="dashboard-footer client-footer">
+            <footer className="-footer client-footer">
                 <button onClick={onLogout} className="button footer-button logout-mobile">
                     Logout
                 </button>
@@ -379,4 +370,5 @@ function ClientDashboard({ onLogout }) {
 }
 
 export default ClientDashboard;
+
 

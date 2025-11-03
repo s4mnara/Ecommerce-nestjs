@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 :root {
     --color-primary: #000000;
     --color-secondary: #FFC107;
@@ -14,6 +20,8 @@ html, body, #root {
     margin: 0;
     padding: 0;
     font-family: Arial, Helvetica, sans-serif;
+    overflow-y: scroll; 
+    overflow-x: hidden; 
 }
 
 body {
@@ -25,6 +33,7 @@ body {
     background-repeat: no-repeat;
     background-attachment: fixed;
     color: var(--color-white); 
+    overflow-x: hidden;
 }
 
 body::before {
@@ -115,6 +124,12 @@ h1, h2, h3 {
     color: var(--color-white);
 }
 
+form label {
+    margin-top: 5px;
+    margin-bottom: 2px;
+}
+
+
 a {
     color: var(--color-secondary);
     text-decoration: none;
@@ -186,11 +201,15 @@ input:focus, select:focus {
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 100vh;
     background-color: var(--color-background-dark);
 }
 
 .dashboard-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
     background-color: #111111;
     color: var(--color-secondary);
     padding: 15px 25px;
@@ -198,7 +217,11 @@ input:focus, select:focus {
     justify-content: space-between;
     align-items: center;
     gap: 15px;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    height: 60px; 
 }
+
 
 .client-greeting-group {
     display: flex;
@@ -238,7 +261,7 @@ input:focus, select:focus {
 }
 
 .pedidos-button:hover {
-    background-color: var(--color-secondary);
+    background-color: var(--color-background-light);
 }
 
 .icon-button {
@@ -319,6 +342,18 @@ input:focus, select:focus {
 
 .dashboard-body-container {
     display: flex;
+    padding: 20px;
+    gap: 20px;
+    max-width: 1600px;
+    width: 100%;
+    margin: 0 auto;
+    align-items: flex-start;
+    
+    padding-top: 400px; /* Ajuste final para o topo */
+    padding-left: 220px; 
+}
+.dashboard-body-container-client {
+    display: flex;
     flex: 1;
     padding: 20px;
     gap: 20px;
@@ -341,7 +376,15 @@ input:focus, select:focus {
     color: var(--color-white);
     padding: 15px 0;
     width: 200px; 
-    min-height: 100%;
+    
+    position: fixed;
+    left: 0;
+    
+    top: 60px; 
+    
+    height: calc(100vh - 60px); 
+    
+    z-index: 999;
 }
 
 .sidebar a {
@@ -380,6 +423,18 @@ input:focus, select:focus {
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     color: var(--color-white);
+    margin-top: 0; 
+}
+
+/* CORREÇÃO DO TOPO: Garante que o título não empurre o campo 'Nome' */
+.produto-form-panel h3 {
+    text-align: left;
+    margin-bottom: 10px; 
+    margin-top: 0; 
+    padding-left: 0; 
+    border-bottom: 2px solid var(--color-secondary);
+    color: var(--color-white);
+    padding-bottom: 5px; 
 }
 
 .file-input-group {
@@ -443,6 +498,8 @@ input:focus, select:focus {
     border-radius: 10px;
     box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
     width: 100%;
+    align-items: stretch;
+    scroll-snap-type: x mandatory;
 }
 
 .produto-card {
@@ -455,6 +512,15 @@ input:focus, select:focus {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     text-align: left;
     flex-shrink: 0;
+    display: flex; 
+    flex-direction: column;
+    height: 100%;
+    scroll-snap-align: start;
+}
+
+.produto-card .add-button {
+    margin-top: auto;
+    width: 100%;
 }
 
 .produto-card img {
@@ -468,6 +534,7 @@ input:focus, select:focus {
 .produto-preco {
     font-weight: bold;
     color: var(--color-secondary);
+    margin-bottom: 10px;
 }
 
 .card-actions {
@@ -504,6 +571,14 @@ input:focus, select:focus {
     background-color: var(--color-background-light);
     border-radius: 8px;
     overflow: hidden;
+}
+
+.produto-imagem-tabela {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    display: block; 
+    margin: 0 auto; 
 }
 
 .inventory-table th, .inventory-table td {
@@ -617,7 +692,19 @@ input:focus, select:focus {
     .dashboard-body-container {
         flex-direction: column;
         padding: 10px;
+        padding-top: 80px; 
+        padding-left: 10px; 
     }
+    
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        margin-bottom: 20px;
+        top: auto;
+        z-index: auto;
+    }
+    
     .logout-desktop { display: none; }
     .logout-mobile { display: block; width: 100%; max-width: 300px; }
 
