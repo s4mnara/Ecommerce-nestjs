@@ -6,10 +6,11 @@ import { Pedido } from '../entity/pedido.entity';
 export class PedidosController {
     constructor(private readonly pedidosService: PedidosService) {}
 
-    @Post('usuario/:usuarioId')
+    @Post(':usuarioId')
     criarPedido(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
-        return this.pedidosService.criarPedido(usuarioId);
+    return this.pedidosService.criarPedido(usuarioId);
     }
+
 
     @Get('usuario/:usuarioId')
     findByUsuarioId(@Param('usuarioId', ParseIntPipe) usuarioId: number) {

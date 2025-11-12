@@ -8,15 +8,12 @@ import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { PedidosService } from './pedidos.service';
 import { PedidosController } from './pedidos.controller';
 import { CarrinhoModule } from '../carrinho/carrinho.module';
-import { TelegramModule } from '../telegram/telegram.module';
-import { KafkaModule } from '../kafka/kafka.module';
+
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pedido, Usuario, Produto, Carrinho, ItemCarrinho]),
     CarrinhoModule,
-    TelegramModule,
-    KafkaModule,
   ],
   controllers: [PedidosController],
   providers: [PedidosService],

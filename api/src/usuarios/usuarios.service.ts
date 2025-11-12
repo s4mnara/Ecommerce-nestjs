@@ -2,26 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../entity/usuario.entity';
-import { KafkaProducer } from '../kafka/kafka.producer';
 
 @Injectable()
 export class UsuariosService {
   constructor(
     @InjectRepository(Usuario) private readonly usuarioRepository: Repository<Usuario>,
-    private readonly kafkaProducer: KafkaProducer,
   ) {}
 
   async create(usuario: Partial<Usuario>): Promise<Usuario> {
     const novoUsuario = this.usuarioRepository.create(usuario);
-    const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
-
-    // Emite evento via KafkaProducer
-    await this.kafkaProducer.emit('usuario.cadastrado', {
-      usuarioId: usuarioSalvo.id,
-      nome: usuarioSalvo.nome,
-    });
-
-    return usuarioSalvo;
+    return this.usuarioRepository.save(novoUsuario);
   }
 
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
