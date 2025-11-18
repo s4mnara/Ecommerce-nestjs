@@ -1,4 +1,4 @@
-// src/pedidos/pedidos.service.ts
+// src/pagamento/pagamentos.service.ts
 
 import {
   Injectable,
@@ -17,7 +17,7 @@ import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
 
 @Injectable()
-export class PedidosService {
+export class PagamentosService {
   constructor(
     private dataSource: DataSource,
 
@@ -37,42 +37,38 @@ export class PedidosService {
     private produtoRepo: Repository<Produto>,
   ) {}
 
-  // ============================================================
-  // COMPATIBILIDADE COM O CONTROLLER
-  // ============================================================
-  async criarPedido(usuarioId: number) {
-    return this.criarPedidoAPartirDoCarrinho(usuarioId);
-  }
-
-  // ============================================================
-  // MÉTODO PRINCIPAL — CHECKOUT FALSO COM TRANSAÇÃO
-  // ============================================================
-  async criarPedidoAPartirDoCarrinho(usuarioId: number) {
+  /**
+   * PROCESSA PAGAMENTO FALSO COM TRANSAÇÃO E LOCK PESSIMISTA
+   */
+  async processarPagamentoFalso(usuarioId: number) {
+    // 1) Buscar o carrinho e itens
     const carrinho = await this.carrinhoRepo.findOne({
       where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
+      relations: ['usuario', 'itens', 'itens.produto'],
     });
 
     if (!carrinho) {
-      throw new NotFoundException('Carrinho não encontrado para o usuário.');
+      throw new NotFoundException('Carrinho não encontrado');
     }
 
-    if (!carrinho.itens || carrinho.itens.length === 0) {
-      throw new BadRequestException('Carrinho vazio.');
+    if (carrinho.itens.length === 0) {
+      throw new BadRequestException('Seu carrinho está vazio');
     }
 
+    // 2) Criar QueryRunner para transação
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Repositórios sob transação
       const produtoRepoQR = queryRunner.manager.getRepository(Produto);
       const pedidoRepoQR = queryRunner.manager.getRepository(Pedido);
       const itemPedidoRepoQR = queryRunner.manager.getRepository(ItemPedido);
-      const itemCarrinhoRepoQR = queryRunner.manager.getRepository(ItemCarrinho);
       const carrinhoRepoQR = queryRunner.manager.getRepository(Carrinho);
+      const itemCarrinhoRepoQR = queryRunner.manager.getRepository(ItemCarrinho);
 
-      // 1 — Validação de estoque com lock
+      // 3) Validar estoque com LOCK pessimistc write
       for (const item of carrinho.itens) {
         const produto = await produtoRepoQR.findOne({
           where: { id: item.produto.id },
@@ -89,35 +85,35 @@ export class PedidosService {
           throw new BadRequestException({
             message: `Estoque insuficiente para o produto "${produto.nome}".`,
             productId: produto.id,
-            available: produto.estoque,
+            disponivel: produto.estoque,
           });
         }
       }
 
-      // 2 — Deduzir estoque
+      // 4) Subtrair estoque
       for (const item of carrinho.itens) {
         await produtoRepoQR.decrement(
-          { id: item.produto.id } as any,
+          { id: item.produto.id },
           'estoque',
           item.quantidade,
         );
       }
 
-      // 3 — Criar pedido
+      // 5) Criar pedido
       const totalPedido = carrinho.itens.reduce(
-        (acc, it) => acc + Number(it.subtotal),
+        (acc, item) => acc + Number(item.subtotal),
         0,
       );
 
       const novoPedido = pedidoRepoQR.create({
         usuario: { id: usuarioId } as Usuario,
         total: totalPedido,
-        finalizado: true,
+        finalizado: true, // marca como concluído (pagamento falso)
       });
 
       const pedidoSalvo = await pedidoRepoQR.save(novoPedido);
 
-      // 4 — Criar itens do pedido
+      // 6) Criar itens do pedido
       for (const item of carrinho.itens) {
         const itemPedido = itemPedidoRepoQR.create({
           pedido: pedidoSalvo,
@@ -125,92 +121,69 @@ export class PedidosService {
           quantidade: item.quantidade,
           subtotal: item.subtotal,
         });
-
         await itemPedidoRepoQR.save(itemPedido);
       }
 
-      // 5 — Limpar carrinho
-      const itemIds = carrinho.itens.map((i) => i.id);
-      if (itemIds.length > 0) {
-        await itemCarrinhoRepoQR.delete(itemIds);
-      }
+      // 7) Limpar carrinho
+      await itemCarrinhoRepoQR.remove(carrinho.itens);
 
       carrinho.itens = [];
       carrinho.total = 0;
+
       await carrinhoRepoQR.save(carrinho);
 
+      // 8) Commit final
       await queryRunner.commitTransaction();
 
+      // 9) Retorno para frontend
       return {
         success: true,
-        message: 'Pedido criado com sucesso.',
+        message: 'Pagamento simulado concluído com sucesso!',
         orderId: pedidoSalvo.id,
-        total: Number(pedidoSalvo.total),
+        url: `http://localhost:3000/pagamento/sucesso/${pedidoSalvo.id}`,
       };
     } catch (err) {
-      try {
-        await queryRunner.rollbackTransaction();
-      } catch {}
+      await queryRunner.rollbackTransaction();
+      console.error('ERRO NO PAGAMENTO FALSO → ', err);
 
-      if (err instanceof NotFoundException || err instanceof BadRequestException) {
-        throw err;
-      }
+      if (err.status) throw err;
 
-      throw new InternalServerErrorException('Falha ao criar pedido.');
+      throw new InternalServerErrorException(
+        'Falha ao processar pagamento simulado',
+      );
     } finally {
       await queryRunner.release();
     }
   }
 
-  // ============================================================
-  // MÉTODOS RESTAURADOS (USADOS PELO CONTROLLER)
-  // ============================================================
-
-  async findByUsuarioId(usuarioId: number) {
-    const pedidos = await this.pedidoRepo.find({
-      where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto'],
-      order: { id: 'DESC' },
-    });
-
-    return pedidos;
-  }
-
-  async findAll() {
-    return this.pedidoRepo.find({
-      relations: ['usuario', 'itens', 'itens.produto'],
-      order: { id: 'DESC' },
-    });
-  }
-
-  async findOne(id: number) {
+  /**
+   * ROTA DE SUCESSO (MOSTRA RESUMO DO PEDIDO)
+   */
+  async obterResumoPedido(orderId: number) {
     const pedido = await this.pedidoRepo.findOne({
-      where: { id },
+      where: { id: orderId },
       relations: ['usuario', 'itens', 'itens.produto'],
     });
 
     if (!pedido) {
-      throw new NotFoundException(`Pedido ${id} não encontrado`);
+      throw new NotFoundException('Pedido não encontrado');
     }
 
-    return pedido;
-  }
-
-  async update(id: number, data: Partial<Pedido>) {
-    const pedido = await this.findOne(id);
-    Object.assign(pedido, data);
-    return this.pedidoRepo.save(pedido);
-  }
-
-  async remove(id: number) {
-    const pedido = await this.findOne(id);
-    await this.pedidoRepo.remove(pedido);
-  }
-
-  // ============================================================
-  // MÉTODO OPCIONAL — usado internamente
-  // ============================================================
-  async obterPedidoPorId(orderId: number) {
-    return this.findOne(orderId);
+    return {
+      id: pedido.id,
+      usuario: {
+        id: pedido.usuario.id,
+        nome: pedido.usuario.nome,
+        email: pedido.usuario.email,
+      },
+      total: Number(pedido.total),
+      itens: pedido.itens.map((item) => ({
+        produtoId: item.produto.id,
+        nome: item.produto.nome,
+        quantidade: item.quantidade,
+        subtotal: Number(item.subtotal),
+      })),
+      finalizado: pedido.finalizado,
+    };
   }
 }
