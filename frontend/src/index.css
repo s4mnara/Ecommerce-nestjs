@@ -726,3 +726,164 @@ input:focus, select:focus {
     .produto-card { min-width: 160px; max-width: 160px; padding: 10px; }
     .produto-form-panel { padding: 15px; }
 }
+
+/* ================================
+   ESTILO DA ROLAGEM (SCROLLBAR)
+   ================================ */
+::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111111;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #FFC107;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #FFB300;
+}
+
+/* ================================
+   ÁREA PRINCIPAL DOS LOGS
+   ================================ */
+.logs-container {
+    background-color: var(--color-background-light);
+    padding: 25px;
+    border-radius: 10px;
+    width: 100%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    overflow-y: auto;
+    overflow-x: auto;
+    max-height: calc(100vh - 140px);
+}
+
+/* ================================
+   FILTROS SUPERIORES DE LOGS
+   ================================ */
+.logs-filters {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.logs-filters input,
+.logs-filters select {
+    padding: 10px;
+    background-color: var(--color-background-dark);
+    border: 1px solid var(--color-gray-border);
+    border-radius: 6px;
+    color: var(--color-white);
+}
+
+/* ================================
+   TABELA DE LOGS
+   ================================ */
+.logs-table {
+    width: 100%;
+    background-color: var(--color-background-dark);
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 900px;
+}
+
+.logs-table th {
+    background-color: var(--color-primary);
+    color: var(--color-secondary);
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.logs-table td {
+    padding: 12px;
+    color: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-border);
+}
+
+/* Hover da linha */
+.logs-table tr:hover {
+    background-color: #333333;
+}
+
+/* ================================
+   CORES DOS MÉTODOS
+   ================================ */
+.log-method {
+    font-weight: bold;
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.log-method.GET {
+    background-color: #0A7E00;
+    color: #ffffff;
+}
+
+.log-method.POST {
+    background-color: #006BBD;
+    color: #ffffff;
+}
+
+.log-method.DELETE {
+    background-color: #B30000;
+    color: #ffffff;
+}
+
+.log-method.PUT {
+    background-color: #B35A00;
+    color: #ffffff;
+}
+
+/* ================================
+   AGRUPAMENTO POR DIA
+   ================================ */
+.logs-day-group {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--color-secondary);
+    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 5px;
+}
+
+/* ================================
+   PAGINAÇÃO
+   ================================ */
+.logs-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.logs-pagination button {
+    padding: 8px 15px;
+    background-color: var(--color-secondary);
+    color: var(--color-primary);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.logs-pagination button:hover {
+    background-color: var(--color-accent-yellow);
+}
+
+/* ================================
+   GARANTE QUE O DASHBOARD TENHA SCROLL
+   ================================ */
+.dashboard-body-container,
+.dashboard-body-container-client {
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}

@@ -8,12 +8,16 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { CarrinhoModule } from './carrinho/carrinho.module';
 import { PedidosModule } from './pedidos/pedidos.module';
 import { ProdutosModule } from './produtos/produtos.module';
+
 import { Usuario } from './entity/usuario.entity';
 import { Produto } from './entity/produto.entity';
 import { Carrinho } from './entity/carrinho.entity';
 import { Pedido } from './entity/pedido.entity';
 import { ItemCarrinho } from './entity/item-carrinho.entity';
 import { ItemPedido } from './entity/item-pedido.entity';
+
+import { LogsModule } from './logs-usuario/logs.module';
+import { Log } from './entity/log.entity';
 
 @Module({
   imports: [
@@ -32,15 +36,17 @@ import { ItemPedido } from './entity/item-pedido.entity';
         Pedido,
         ItemCarrinho,
         ItemPedido,
+        Log  
       ],
       synchronize: true,
     }),
+    LogsModule, 
     AuthModule,
     UsuariosModule,
     CarrinhoModule,
     PedidosModule,
     ProdutosModule,
+    PagamentosModule,
   ],
 })
 export class AppModule {}
-

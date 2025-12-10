@@ -1,9 +1,5 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    return !!request.user; // ou lógica de validação do token
-  }
-}
+export class AuthGuard extends PassportAuthGuard('jwt') {}

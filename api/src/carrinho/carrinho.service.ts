@@ -5,6 +5,7 @@ import { Carrinho } from '../entity/carrinho.entity';
 import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
 import { ItemCarrinho } from '../entity/item-carrinho.entity';
+import { LogsService } from '../logs-usuario/logs.service';
 
 @Injectable()
 export class CarrinhoService {
@@ -20,6 +21,8 @@ export class CarrinhoService {
 
     @InjectRepository(ItemCarrinho)
     private readonly itemCarrinhoRepository: Repository<ItemCarrinho>,
+
+    private readonly logsService: LogsService, // injetado
   ) {}
 
   async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number) {
@@ -59,7 +62,13 @@ export class CarrinhoService {
     carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
     await this.carrinhoRepository.save(carrinho);
 
-    console.log(`Produto ${produtoId} adicionado ao carrinho do usuário ${usuarioId}`);
+    // Registro de log personalizado
+    await this.logsService.registrarLog({
+      usuarioId,
+      acao: 'Adicionar produto ao carrinho',
+      detalhes: { produtoId, quantidade },
+    });
+
     return this.obterCarrinho(usuarioId);
   }
 
@@ -82,6 +91,12 @@ export class CarrinhoService {
     carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
     await this.carrinhoRepository.save(carrinho);
 
+    await this.logsService.registrarLog({
+      usuarioId,
+      acao: 'Atualizar quantidade do produto no carrinho',
+      detalhes: { produtoId, novaQuantidade },
+    });
+
     return this.obterCarrinho(usuarioId);
   }
 
@@ -100,6 +115,12 @@ export class CarrinhoService {
     carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
     await this.carrinhoRepository.save(carrinho);
 
+    await this.logsService.registrarLog({
+      usuarioId,
+      acao: 'Remover produto do carrinho',
+      detalhes: { produtoId },
+    });
+
     return this.obterCarrinho(usuarioId);
   }
 
@@ -114,6 +135,11 @@ export class CarrinhoService {
     carrinho.itens = [];
     carrinho.total = 0;
     await this.carrinhoRepository.save(carrinho);
+
+    await this.logsService.registrarLog({
+      usuarioId,
+      acao: 'Limpar carrinho',
+    });
 
     return { message: 'Carrinho limpo com sucesso.', total: 0, itens: [] };
   }
@@ -150,3 +176,4 @@ export class CarrinhoService {
     };
   }
 }
+

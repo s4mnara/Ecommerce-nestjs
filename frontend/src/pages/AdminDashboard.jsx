@@ -4,6 +4,9 @@ import "../index.css";
 
 const BASE_IMAGE_URL = 'http://localhost:8080/uploads/';
 
+/* ==========================================
+   COMPONENTE: TABELA DE PRODUTOS
+========================================== */
 const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
     <div className="produto-form-panel" style={{ marginTop: '20px' }}>
         <h3>Itens no Inventário</h3>
@@ -29,11 +32,11 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
                                     src={`${BASE_IMAGE_URL}${p.imagem}`}
                                     alt={p.nome}
                                     className="produto-imagem-tabela"
-                                    style={{ 
-                                        width: "50px", 
-                                        height: "50px", 
-                                        objectFit: "cover", 
-                                        borderRadius: "5px" 
+                                    style={{
+                                        width: "50px",
+                                        height: "50px",
+                                        objectFit: "cover",
+                                        borderRadius: "5px"
                                     }}
                                 />
                             )}
@@ -53,6 +56,9 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
     </div>
 );
 
+/* ==========================================
+   COMPONENTE: TABELA DE USUÁRIOS
+========================================== */
 const UsuariosTable = ({ usuarios, removerUsuario }) => (
     <div className="produto-form-panel" style={{ marginTop: '20px' }}>
         <h3>Usuários Cadastrados</h3>
@@ -85,31 +91,136 @@ const UsuariosTable = ({ usuarios, removerUsuario }) => (
     </div>
 );
 
-const LogsPanel = ({ logs }) => (
-    <div className="produto-form-panel" style={{ marginTop: '20px' }}>
-        <h3>Logs de Acesso</h3>
-        {logs.length === 0 ? (
-            <p>Nenhum log encontrado.</p>
-        ) : (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-                {logs.map((log, i) => (
-                    <li key={i} style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        padding: '10px',
-                        marginBottom: '8px',
-                        borderRadius: '8px'
-                    }}>
-                        <strong>{log.usuario || "Desconhecido"}</strong> — {log.acao}
-                        <br />
-                        <small>{new Date(log.data).toLocaleString()}</small>
-                    </li>
+/* ==========================================
+   COMPONENTE: PAINEL DE LOGS (COMPLETO)
+========================================== */
+const LogsPanel = ({ logs }) => {
+    const [usuarioFiltro, setUsuarioFiltro] = useState('');
+    const [metodoFiltro, setMetodoFiltro] = useState('');
+    const [dataInicio, setDataInicio] = useState('');
+    const [dataFim, setDataFim] = useState('');
+    const [pagina, setPagina] = useState(1);
+    const porPagina = 10;
+
+    const metodoCor = {
+        GET: "#4CAF50",
+        POST: "#2196F3",
+        PUT: "#FF9800",
+        DELETE: "#F44336"
+    };
+
+    const filtrarLogs = logs.filter(log => {
+        const nomeUsuario = log.usuario?.nome?.toLowerCase() || "desconhecido";
+
+        const passaUsuario = usuarioFiltro === '' || nomeUsuario.includes(usuarioFiltro.toLowerCase());
+        const passaMetodo = metodoFiltro === '' || log.metodo === metodoFiltro;
+
+        const dataLog = new Date(log.criadoEm);
+
+        const passaInicio = !dataInicio || dataLog >= new Date(dataInicio + "T00:00");
+        const passaFim = !dataFim || dataLog <= new Date(dataFim + "T23:59");
+
+        return passaUsuario && passaMetodo && passaInicio && passaFim;
+    });
+
+    const agrupado = filtrarLogs.reduce((acc, log) => {
+        const d = new Date(log.criadoEm).toLocaleDateString('pt-BR');
+        if (!acc[d]) acc[d] = [];
+        acc[d].push(log);
+        return acc;
+    }, {});
+
+    const dias = Object.keys(agrupado);
+    const totalPaginas = Math.max(1, Math.ceil(dias.length / porPagina));
+    const diasPaginados = dias.slice((pagina - 1) * porPagina, pagina * porPagina);
+
+    return (
+        <div className="produto-form-panel" style={{ marginTop: "20px" }}>
+            <h3>Logs de Acesso</h3>
+
+            {/* FILTROS */}
+            <div style={{ display: "flex", gap: "10px", marginBottom: "15px", flexWrap: "wrap" }}>
+                <input
+                    type="text"
+                    placeholder="Filtrar por usuário"
+                    value={usuarioFiltro}
+                    onChange={e => setUsuarioFiltro(e.target.value)}
+                />
+
+                <select value={metodoFiltro} onChange={e => setMetodoFiltro(e.target.value)}>
+                    <option value="">Método</option>
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+
+                <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+                <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
+            </div>
+
+            {/* LISTA */}
+            <div style={{
+                maxHeight: "400px",
+                overflowY: "auto",
+                paddingRight: "10px"
+            }}>
+                {diasPaginados.map(dia => (
+                    <div key={dia} style={{ marginBottom: "20px" }}>
+                        <h4 style={{ borderBottom: "1px solid #555", paddingBottom: "5px" }}>{dia}</h4>
+
+                        {agrupado[dia].map((log, i) => (
+                            <div key={i} style={{
+                                background: "rgba(255,255,255,0.05)",
+                                padding: "10px",
+                                marginBottom: "8px",
+                                borderRadius: "8px",
+                                borderLeft: `5px solid ${metodoCor[log.metodo] || "#999"}`
+                            }}>
+                                <div>
+                                    <strong style={{ color: metodoCor[log.metodo] }}>
+                                        {log.metodo}
+                                    </strong> — {log.acao}
+                                </div>
+
+                                <div style={{ fontSize: "14px", marginTop: "4px" }}>
+                                    Usuário: <strong>{log.usuario?.nome || "Desconhecido"}</strong>
+                                </div>
+
+                                <small>{new Date(log.criadoEm).toLocaleString("pt-BR")}</small>
+                            </div>
+                        ))}
+                    </div>
                 ))}
-            </ul>
-        )}
-    </div>
-);
+            </div>
 
+            {/* PAGINAÇÃO */}
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "10px",
+                gap: "10px"
+            }}>
+                <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}>
+                    {"<"} Anterior
+                </button>
 
+                <span>Página {pagina} / {totalPaginas}</span>
+
+                <button
+                    onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                    disabled={pagina === totalPaginas}
+                >
+                    Próxima {">"}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+/* ==========================================
+   COMPONENTE PRINCIPAL: ADMIN DASHBOARD
+========================================== */
 function AdminDashboard({ onLogout }) {
     const [produtos, setProdutos] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
@@ -170,14 +281,14 @@ function AdminDashboard({ onLogout }) {
         formData.append('preco', parseFloat(form.preco));
         formData.append('estoque', parseInt(form.estoque));
         if (form.imagem) formData.append('imagem', form.imagem);
-        
+
         try {
             if (editando) {
                 await api.put(`/produtos/${form.id}`, formData);
             } else {
                 await api.post('/produtos', formData);
             }
-            
+
             setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null });
             setEditando(false);
             carregarProdutos();
@@ -187,11 +298,11 @@ function AdminDashboard({ onLogout }) {
     };
 
     const editarProduto = (produto) => {
-        setForm({ 
-            ...produto, 
+        setForm({
+            ...produto,
             imagem: null,
-            preco: String(produto.preco), 
-            estoque: String(produto.estoque) 
+            preco: String(produto.preco),
+            estoque: String(produto.estoque)
         });
         setEditando(true);
     };
@@ -242,7 +353,6 @@ function AdminDashboard({ onLogout }) {
         fileName = 'Nenhum arquivo selecionado';
     }
 
-
     return (
         <div className="admin-dashboard">
             <header className="dashboard-header" style={{ justifyContent: 'space-between' }}>
@@ -251,7 +361,7 @@ function AdminDashboard({ onLogout }) {
                     <h2 className="dashboard-title">{activeMenu}</h2>
                 </div>
                 <div className="client-greeting-group">
-                    Bem-vindo(a), <strong style={{color: 'var(--color-secondary)'}}>{adminName}</strong>
+                    Bem-vindo(a), <strong style={{ color: 'var(--color-secondary)' }}>{adminName}</strong>
                 </div>
             </header>
 
@@ -273,13 +383,13 @@ function AdminDashboard({ onLogout }) {
                                     <label>Imagem</label>
                                     <div className="file-input-group">
                                         <label htmlFor="imagem-upload" className="custom-file-upload-label">{fileName}</label>
-                                        <input 
-                                            id="imagem-upload" 
-                                            type="file" 
-                                            name="imagem" 
-                                            accept="image/*" 
-                                            onChange={handleImageChange} 
-                                            className="hidden-file-input" 
+                                        <input
+                                            id="imagem-upload"
+                                            type="file"
+                                            name="imagem"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            className="hidden-file-input"
                                         />
                                     </div>
 
@@ -289,7 +399,9 @@ function AdminDashboard({ onLogout }) {
                                     <label>Estoque</label>
                                     <input type="number" name="estoque" value={form.estoque} onChange={handleChange} required />
 
-                                    <button type="submit" className="button submit-button">{editando ? 'Salvar Alterações' : 'Salvar Item'}</button>
+                                    <button type="submit" className="button submit-button">
+                                        {editando ? 'Salvar Alterações' : 'Salvar Item'}
+                                    </button>
                                 </form>
                             </div>
 
@@ -297,8 +409,13 @@ function AdminDashboard({ onLogout }) {
                         </>
                     )}
 
-                    {activeMenu === 'Usuários' && <UsuariosTable usuarios={usuarios} removerUsuario={removerUsuario} />}
-                    {activeMenu === 'Logs' && <LogsPanel logs={logs} />}
+                    {activeMenu === 'Usuários' && (
+                        <UsuariosTable usuarios={usuarios} removerUsuario={removerUsuario} />
+                    )}
+
+                    {activeMenu === 'Logs' && (
+                        <LogsPanel logs={logs} />
+                    )}
                 </div>
             </div>
 
