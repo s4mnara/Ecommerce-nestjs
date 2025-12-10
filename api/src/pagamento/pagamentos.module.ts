@@ -9,9 +9,12 @@ import { Carrinho } from '../entity/carrinho.entity';
 import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
+import { LogsModule } from 'src/logs-usuario/logs.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Pedido, ItemPedido, Carrinho, ItemCarrinho, Produto, Usuario])],
+  imports: [TypeOrmModule.forFeature([Pedido, ItemPedido, Carrinho, ItemCarrinho, Produto, Usuario]),
+  LogsModule,
+],
   controllers: [PagamentosController],
   providers: [PagamentosService],
   exports: [PagamentosService],

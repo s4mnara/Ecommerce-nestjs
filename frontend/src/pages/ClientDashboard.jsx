@@ -7,8 +7,8 @@ const getClientName = () => {
     if (storedUser) {
         try {
             const user = JSON.parse(storedUser);
-            return user.nome ? user.nome.split(' ')[0] : "Cliente";
-        } catch (e) {
+            return user.nome ? user.nome.split(" ")[0] : "Cliente";
+        } catch {
             return "Cliente";
         }
     }
@@ -22,49 +22,50 @@ function ClientDashboard({ onLogout }) {
     const [history, setHistory] = useState([]);
     const [showCart, setShowCart] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+
     const clientName = getClientName();
-    
     const storedUser = localStorage.getItem("usuario");
     const userId = storedUser ? JSON.parse(storedUser).id : null;
 
     const API_URL = "http://localhost:8080";
     const token = localStorage.getItem("accessToken");
+
+    // Axios com token
     const axiosAuth = axios.create({
         baseURL: API_URL,
         headers: { Authorization: `Bearer ${token}` },
     });
 
+    // ======== CARREGAR DADOS ========
+    const carregarProdutos = async () => {
+        try {
+            const res = await axiosAuth.get("/produtos");
+            setProdutos(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Erro ao carregar produtos:", err);
+            setProdutos([]);
+        }
+    };
+
     const carregarCarrinho = async () => {
         if (!userId) return;
         try {
             const res = await axiosAuth.get(`/carrinho/${userId}`);
-            setCarrinho(res.data.itens || res.data || []); 
+            setCarrinho(res.data.itens || res.data || []);
         } catch (err) {
-            console.error("Erro ao carregar carrinho persistente:", err);
+            console.error("Erro ao carregar carrinho:", err);
             setCarrinho([]);
         }
     };
-    
+
     const carregarPedidos = async () => {
         if (!userId) return;
         try {
             const res = await axiosAuth.get(`/pedidos/usuario/${userId}`);
             setHistory(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("Erro ao carregar histórico de pedidos:", err);
+            console.error("Erro ao carregar histórico:", err);
             setHistory([]);
-        }
-    };
-
-    const carregarProdutos = async () => {
-        try {
-            const res = await axiosAuth.get("/produtos");
-            setProdutos(Array.isArray(res.data) ? res.data : []);
-        } catch (err) {
-            axios
-                .get("http://localhost:8080/produtos")
-                .then((res) => setProdutos(res.data))
-                .catch((err) => console.error("Erro ao buscar produtos:", err));
         }
     };
 
@@ -74,6 +75,7 @@ function ClientDashboard({ onLogout }) {
         carregarPedidos();
     }, []);
 
+    // ======== CARRINHO ========
     const handleAddToCart = async (produto) => {
         if (!userId) return alert("Usuário não autenticado.");
         try {
@@ -86,7 +88,7 @@ function ClientDashboard({ onLogout }) {
             setShowHistory(false);
         } catch (err) {
             alert("Erro ao adicionar produto ao carrinho.");
-            console.error("Erro ao adicionar produto:", err);
+            console.error(err);
         }
     };
 
@@ -97,18 +99,16 @@ function ClientDashboard({ onLogout }) {
             carregarCarrinho();
         } catch (err) {
             alert("Erro ao remover produto do carrinho.");
-            console.error("Erro ao remover produto:", err);
+            console.error(err);
         }
     };
 
     const handleUpdateQuantity = async (produtoId, change) => {
         if (!userId) return;
-        
-        const item = carrinho.find(i => i.id === produtoId);
+        const item = carrinho.find((i) => i.id === produtoId);
         if (!item) return;
 
         const novaQuantidade = item.quantidade + change;
-
         if (novaQuantidade <= 0) {
             await handleRemoveFromCart(produtoId);
             return;
@@ -116,14 +116,14 @@ function ClientDashboard({ onLogout }) {
 
         try {
             await axiosAuth.put(`/carrinho/${userId}/atualizar/${produtoId}`, {
-                quantidade: novaQuantidade, 
+                quantidade: novaQuantidade,
             });
             carregarCarrinho();
         } catch (err) {
-             console.error("Erro ao atualizar quantidade:", err);
+            console.error("Erro ao atualizar quantidade:", err);
         }
     };
-    
+
     const handleClearCart = async () => {
         if (!userId) return;
         try {
@@ -131,28 +131,44 @@ function ClientDashboard({ onLogout }) {
             carregarCarrinho();
         } catch (err) {
             alert("Erro ao limpar carrinho.");
-            console.error("Erro ao limpar carrinho:", err);
+            console.error(err);
         }
     };
 
     const finalizarPedido = async () => {
-        if (carrinho.length === 0) {
-              alert("O carrinho está vazio.");
-              return;
-        }
         if (!userId) return;
+        if (carrinho.length === 0) return alert("Carrinho vazio.");
 
         try {
             const res = await axiosAuth.post(`/pagamentos/iniciar/${userId}`);
-            const { url } = res.data;
-            window.location.href = url; 
-        } catch (error) {
-            console.error("Erro ao iniciar pagamento:", error);
-            alert("Erro ao iniciar o processo de pagamento. Verifique o console.");
+            const { url, success } = res.data;
+            if (success) window.location.href = url;
+            else {
+                alert("Erro no pagamento. Pedido criado como pendente.");
+                carregarPedidos();
+            }
+        } catch (err) {
+            console.error("Erro ao finalizar pedido:", err);
+            alert("Erro ao iniciar pagamento. Pedido criado como pendente.");
+            carregarPedidos();
         }
         setShowCart(false);
     };
 
+    const tentarFinalizarPedido = async (pedidoId) => {
+        if (!userId) return;
+        try {
+            const res = await axiosAuth.post(`/pagamentos/reprocessar/${pedidoId}`);
+            const { url, success } = res.data;
+            if (success) window.location.href = url;
+            else alert("Erro ao processar pagamento.");
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao tentar finalizar pedido.");
+        }
+    };
+
+    // ======== UI Dinâmica ========
     const handleShowCart = () => {
         setShowHistory(false);
         setShowCart((prev) => !prev);
@@ -177,6 +193,7 @@ function ClientDashboard({ onLogout }) {
 
     const countCarrinho = carrinho.reduce((acc, item) => item.quantidade ? acc + item.quantidade : acc, 0);
 
+    // ======== COMPONENTES INTERNOS ========
     const ProdutoCard = ({ p }) => (
         <div key={p.id} className="produto-card">
             {p.imagem && <img src={`http://localhost:8080/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
@@ -195,78 +212,29 @@ function ClientDashboard({ onLogout }) {
     const CarrinhoPanel = () => (
         <div className="cart-container side-panel clients-section side-panel-fixed">
             <h2>🛒 Seu Carrinho</h2>
-            <button onClick={() => setShowCart(false)} className="button close-cart-button small-button">Fechar</button> 
-            {carrinho.length === 0 ? (
-                <p>Carrinho vazio.</p>
-            ) : (
+            <button onClick={() => setShowCart(false)} className="button close-cart-button small-button">Fechar</button>
+            {carrinho.length === 0 ? <p>Carrinho vazio.</p> : (
                 <>
-                    <ul className="clientes-list" style={{ padding: 0, listStyle: 'none' }}>
-                        {carrinho.map((item) => {
-                            const itemTotal = (item.preco && item.quantidade) ? (item.preco * item.quantidade) : 0;
-                            const itemTotalDisplay = `R$ ${itemTotal.toFixed(2)}`;
-
-                            return (
-                                <li key={item.id} className="cliente-card cart-item" style={{ 
-                                    display: 'grid', 
-                                    gridTemplateColumns: '1fr 80px 100px', 
-                                    gap: '10px', 
-                                    alignItems: 'center',
-                                    marginBottom: '10px',
-                                    paddingBottom: '10px',
-                                    borderBottom: '1px solid var(--color-gray-border)'
-                                }}>
-                                    <div>
-                                        <span style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {item.nome}
-                                        </span>
-                                        <span style={{ display: 'block', fontSize: '0.9em', color: 'var(--color-secondary)' }}>
-                                            {itemTotalDisplay}
-                                        </span>
-                                    </div>
-                                    
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <button
-                                            className="button icon-button"
-                                            onClick={() => handleUpdateQuantity(item.id, -1)}
-                                            style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}
-                                        >
-                                            -
-                                        </button>
-                                        <span style={{ fontWeight: 'bold' }}>{item.quantidade}</span>
-                                        <button
-                                            className="button icon-button"
-                                            onClick={() => handleUpdateQuantity(item.id, 1)}
-                                            style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                    
-                                    <button
-                                        className="button remove-button"
-                                        onClick={() => handleRemoveFromCart(item.id)}
-                                        style={{ padding: '5px 10px', fontSize: '0.8em', minWidth: '70px' }} 
-                                    >
-                                        Remover
-                                    </button>
-                                </li>
-                            );
-                        })}
+                    <ul style={{ padding: 0, listStyle: 'none' }}>
+                        {carrinho.map(item => (
+                            <li key={item.id} className="cliente-card cart-item" style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px', gap: '10px', alignItems: 'center', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--color-gray-border)' }}>
+                                <div>
+                                    <span style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nome}</span>
+                                    <span style={{ display: 'block', fontSize: '0.9em', color: 'var(--color-secondary)' }}>R$ {(item.preco * item.quantidade).toFixed(2)}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <button onClick={() => handleUpdateQuantity(item.id, -1)} className="button icon-button" style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}>-</button>
+                                    <span style={{ fontWeight: 'bold' }}>{item.quantidade}</span>
+                                    <button onClick={() => handleUpdateQuantity(item.id, 1)} className="button icon-button" style={{ width: '25px', height: '25px', padding: '0', backgroundColor: 'var(--color-primary)', color: 'var(--color-white)' }}>+</button>
+                                </div>
+                                <button onClick={() => handleRemoveFromCart(item.id)} className="button remove-button" style={{ padding: '5px 10px', fontSize: '0.8em', minWidth: '70px' }}>Remover</button>
+                            </li>
+                        ))}
                     </ul>
-                    <div className="cart-summary" style={{ marginTop: '20px' }}>
-                        <p className="cart-total" style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Total: R${totalCarrinho}</p>
-                        
-                        <button 
-                            onClick={handleClearCart} 
-                            className="button remove-button"
-                            style={{ marginBottom: '10px', backgroundColor: '#8B0000' }}
-                        >
-                            Limpar Carrinho
-                        </button>
-
-                        <button onClick={finalizarPedido} className="button submit-button full-width-button">
-                            Finalizar Pedido
-                        </button>
+                    <div style={{ marginTop: '20px' }}>
+                        <p style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Total: R${totalCarrinho}</p>
+                        <button onClick={handleClearCart} className="button remove-button" style={{ marginBottom: '10px', backgroundColor: '#8B0000' }}>Limpar Carrinho</button>
+                        <button onClick={finalizarPedido} className="button submit-button full-width-button">Finalizar Pedido</button>
                     </div>
                 </>
             )}
@@ -276,20 +244,23 @@ function ClientDashboard({ onLogout }) {
     const HistoricoPanel = () => (
         <div className="side-panel clients-section side-panel-fixed">
             <h3>📜 Histórico de Pedidos ({history.length})</h3>
-            <button onClick={() => setShowHistory(false)} className="button close-cart-button small-button">Fechar</button> 
+            <button onClick={() => setShowHistory(false)} className="button close-cart-button small-button">Fechar</button>
             <div className="clientes-list">
-                {history.length === 0 ? (
-                    <p>Você não possui pedidos finalizados.</p>
-                ) : (
-                    history.map(pedido => (
-                        <div key={pedido.id} className="cliente-card history-item">
-                            <p><strong>Pedido #{(pedido.id || 'N/A')}</strong></p>
-                            <p>Data: {pedido.data || new Date().toLocaleDateString()}</p>
-                            <p>Total: R$ {parseFloat(pedido.total || 0).toFixed(2)}</p>
-                            <p>Itens: {pedido.itens?.length || '0'}</p>
-                        </div>
-                    ))
-                )}
+                {history.length === 0 ? <p>Você não possui pedidos.</p> :
+                    history.map(pedido => {
+                        const status = pedido.status || 'pendente';
+                        return (
+                            <div key={pedido.id} className="cliente-card history-item">
+                                <p><strong>Pedido #{pedido.id}</strong></p>
+                                <p>Data: {pedido.data || new Date().toLocaleDateString()}</p>
+                                <p>Total: R$ {parseFloat(pedido.total || 0).toFixed(2)}</p>
+                                <p>Status: <span style={{ color: status === 'pendente' ? 'orange' : 'green', fontWeight: 'bold' }}>{status.toUpperCase()}</span></p>
+                                <p>Itens: {pedido.itens?.length || '0'}</p>
+                                {status === 'pendente' && <button onClick={() => tentarFinalizarPedido(pedido.id)} className="button submit-button full-width-button">Finalizar Pedido</button>}
+                            </div>
+                        );
+                    })
+                }
             </div>
         </div>
     );
@@ -300,46 +271,18 @@ function ClientDashboard({ onLogout }) {
         <div className="client-dashboard-layout">
             <header className="dashboard-header">
                 <div className="client-greeting-group">
-                    <img
-                        src="/assets/logoamarela.png"
-                        alt="Logo"
-                        className="client-logo-header"
-                    />
+                    <img src="/assets/logoamarela.png" alt="Logo" className="client-logo-header" />
                     <h2 className="dashboard-title">Olá, {clientName}</h2>
                 </div>
-                
-                <input
-                    type="text"
-                    placeholder="Pesquisar produtos..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
 
-                <button 
-                    onClick={handleShowHistory} 
-                    className="button pedidos-button"
-                >
-                    Pedidos
-                </button>
-
-                <button
-                    onClick={handleShowCart}
-                    className="button icon-button header-cart-button"
-                >
-                    <img
-                        src="/assets/carrinho.png"
-                        alt="Carrinho"
-                        className="icon-img"
-                    />
+                <input type="text" placeholder="Pesquisar produtos..." value={search} onChange={e => setSearch(e.target.value)} />
+                <button onClick={handleShowHistory} className="button pedidos-button">Pedidos</button>
+                <button onClick={handleShowCart} className="button icon-button header-cart-button">
+                    <img src="/assets/carrinho.png" alt="Carrinho" className="icon-img" />
                     <span className="cart-count">({countCarrinho})</span>
                 </button>
-
                 <button onClick={onLogout} className="button icon-button logout-desktop">
-                    <img
-                        src="/assets/logout.png"
-                        alt="Sair"
-                        className="icon-img-white"
-                    />
+                    <img src="/assets/logout.png" alt="Sair" className="icon-img-white" />
                     <span>Sair</span>
                 </button>
             </header>
@@ -349,26 +292,19 @@ function ClientDashboard({ onLogout }) {
                     <div className="produtos-section">
                         <h3>Produtos Disponíveis</h3>
                         <div className="produtos-carousel client-carousel">
-                            {produtosFiltrados.map((p) => (
-                                <ProdutoCard key={p.id} p={p} />
-                            ))}
+                            {produtosFiltrados.map(p => <ProdutoCard key={p.id} p={p} />)}
                             {produtosFiltrados.length === 0 && <p className="no-products-message">Nenhum produto encontrado.</p>}
                         </div>
                     </div>
                 </div>
-                
                 {activePanel}
             </div>
-            
+
             <footer className="-footer client-footer">
-                <button onClick={onLogout} className="button footer-button logout-mobile">
-                    Logout
-                </button>
+                <button onClick={onLogout} className="button footer-button logout-mobile">Logout</button>
             </footer>
         </div>
     );
 }
 
 export default ClientDashboard;
-
-

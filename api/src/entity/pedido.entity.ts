@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, Column, JoinColum
 import { Usuario } from './usuario.entity';
 import { ItemPedido } from './item-pedido.entity';
 
+export type StatusPedido = 'pendente' | 'finalizado' | 'cancelado';
+
 @Entity()
 export class Pedido {
   @PrimaryGeneratedColumn()
@@ -17,7 +19,6 @@ export class Pedido {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   total: number;
 
-  @Column({ default: false })
-  finalizado: boolean;
+  @Column({ type: 'varchar', default: 'pendente' })
+  status: StatusPedido; // substitui finalizado
 }
-

@@ -45,18 +45,34 @@ function LoginPage({ onLoginSuccess }) {
 
       <div className="form-header">
         <h1>Login</h1>
-        <a href="#" className="forgot-password-link">
-        </a>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit(e);
+        }}
+      >
+        <input
+          type="email"
+          placeholder="E-mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          required
+        />
         <button className="button" type="submit" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>
         {erro && <p style={{ color: "red" }}>{erro}</p>}
       </form>
+
       <p style={{ textAlign: "center", marginTop: "15px" }}>
         Não tem conta?{" "}
         <a href="#" onClick={() => navigate("/register")}>

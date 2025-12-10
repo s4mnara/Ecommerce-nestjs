@@ -9,12 +9,14 @@ import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { PedidosService } from './pedidos.service';
 import { PedidosController } from './pedidos.controller';
 import { CarrinhoModule } from '../carrinho/carrinho.module';
+import { LogsModule } from 'src/logs-usuario/logs.module';
 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pedido, Usuario, Produto, Carrinho, ItemCarrinho, ItemPedido]),
     CarrinhoModule,
+    LogsModule,
   ],
   controllers: [PedidosController],
   providers: [PedidosService],

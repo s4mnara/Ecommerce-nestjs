@@ -6,16 +6,23 @@ import { PagamentosService } from './pagamentos.service';
 export class PagamentosController {
   constructor(private readonly pagamentosService: PagamentosService) {}
 
-  // Inicia o pagamento falso e retorna uma "url" para redirecionamento
+  /**
+   * Inicia o pagamento falso e retorna o resumo do pedido
+   * @param usuarioId
+   */
   @Post('iniciar/:usuarioId')
   async iniciar(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
     const result = await this.pagamentosService.processarPagamentoFalso(usuarioId);
     return result;
   }
 
-  // Simula página de sucesso (opcional)
+  /**
+   * Retorna resumo do pedido
+   * @param orderId
+   */
   @Get('sucesso/:orderId')
   async sucesso(@Param('orderId', ParseIntPipe) orderId: number) {
-    return this.pagamentosService.obterResumoPedido(orderId);
+    const resumo = await this.pagamentosService.obterResumoPedido(orderId);
+    return resumo;
   }
 }

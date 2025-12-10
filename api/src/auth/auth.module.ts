@@ -5,11 +5,13 @@ import { UsuariosModule } from '../usuarios/usuarios.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { LogsModule } from 'src/logs-usuario/logs.module';
 
 @Module({
   imports: [
     UsuariosModule,
     ConfigModule,
+    LogsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {

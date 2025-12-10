@@ -29,29 +29,48 @@ function RegisterPage() {
 
   return (
     <div className="container">
-      {/* NOVO: Logo e Nome da Loja alinhados */}
       <div className="login-header-group">
         <img src="/assets/logoamarela.png" alt="Logo" style={{ width: "120px" }} />
         <h2 className="store-name">PowerFit Suplementos</h2>
       </div>
 
-      {/* NOVO: Título "Criar Conta" alinhado à esquerda com o link "Fazer login" */}
       <div className="form-header">
         <h1>Criar Conta</h1>
-        <a href="#" onClick={() => navigate("/login")} className="forgot-password-link">
-          
-        </a>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <input type="text" placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
-        <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit(e);
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Nome"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          required
+        />
+        <input
+          type="email"
+          placeholder="E-mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          required
+        />
         <button className="button" type="submit" disabled={loading}>
           {loading ? "Cadastrando..." : "Cadastrar"}
         </button>
         {erro && <p style={{ color: "red" }}>{erro}</p>}
       </form>
+
       <p style={{ textAlign: "center", marginTop: "15px" }}>
         Já tem conta?{" "}
         <a href="#" onClick={() => navigate("/login")}>

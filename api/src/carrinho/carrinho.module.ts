@@ -6,10 +6,12 @@ import { Produto } from '../entity/produto.entity';
 import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { CarrinhoService } from './carrinho.service';
 import { CarrinhoController } from './carrinho.controller';
+import { LogsModule } from 'src/logs-usuario/logs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Carrinho, Usuario, Produto, ItemCarrinho]),
+    LogsModule,
 
   ],
   controllers: [CarrinhoController],
