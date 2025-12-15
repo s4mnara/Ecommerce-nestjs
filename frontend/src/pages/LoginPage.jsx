@@ -1,17 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { toast } from "react-toastify"; // import do toast
+import 'react-toastify/dist/ReactToastify.css';
 
 function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErro(null);
     setLoading(true);
 
     try {
@@ -22,17 +22,15 @@ function LoginPage({ onLoginSuccess }) {
       localStorage.setItem("usuario", JSON.stringify(usuario));
 
       onLoginSuccess(access_token);
+      toast.success(`Bem-vindo(a), ${usuario.nome.split(" ")[0]}!`);
       setLoading(false);
 
-      if (usuario.role === "admin") {
-        navigate("/dashboard");
-      } else {
-        navigate("/client");
-      }
+      if (usuario.role === "admin") navigate("/dashboard");
+      else navigate("/client");
     } catch (error) {
       setLoading(false);
       const msg = error.response?.data?.message || "Erro no login. Tente novamente.";
-      setErro(msg);
+      toast.error(msg); // exibe erro com toast
     }
   };
 
@@ -70,7 +68,6 @@ function LoginPage({ onLoginSuccess }) {
         <button className="button" type="submit" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>
-        {erro && <p style={{ color: "red" }}>{erro}</p>}
       </form>
 
       <p style={{ textAlign: "center", marginTop: "15px" }}>

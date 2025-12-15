@@ -1,29 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { toast } from "react-toastify"; // import do toast
+import 'react-toastify/dist/ReactToastify.css';
 
 function RegisterPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErro(null);
     setLoading(true);
 
     try {
       const response = await api.post("/auth/cliente/register", { nome, email, senha });
-      alert(`Usuário ${response.data.email} registrado com sucesso!`);
+      toast.success(`Usuário ${response.data.email} registrado com sucesso!`);
       setLoading(false);
       navigate("/login");
     } catch (error) {
       setLoading(false);
       const msg = error.response?.data?.message || "Erro no registro. Tente novamente.";
-      setErro(msg);
+      toast.error(msg); // exibe mensagem de erro com toast
     }
   };
 
@@ -68,7 +68,6 @@ function RegisterPage() {
         <button className="button" type="submit" disabled={loading}>
           {loading ? "Cadastrando..." : "Cadastrar"}
         </button>
-        {erro && <p style={{ color: "red" }}>{erro}</p>}
       </form>
 
       <p style={{ textAlign: "center", marginTop: "15px" }}>

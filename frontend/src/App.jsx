@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -28,6 +31,18 @@ function App() {
   return (
     <Router>
       <div className="app-wrapper">
+        {/* ToastContainer global */}
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnHover
+          draggable
+          theme="colored"
+        />
+
         <Routes>
           <Route path="/" element={<Navigate to="/login" />} />
           <Route
@@ -65,7 +80,4 @@ function App() {
 }
 
 export default App;
-
-
-
 

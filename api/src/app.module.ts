@@ -18,6 +18,7 @@ import { ItemPedido } from './entity/item-pedido.entity';
 
 import { LogsModule } from './logs-usuario/logs.module';
 import { Log } from './entity/log.entity';
+import { RedisCacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { Log } from './entity/log.entity';
     PedidosModule,
     ProdutosModule,
     PagamentosModule,
+    RedisCacheModule,
   ],
 })
 export class AppModule {}

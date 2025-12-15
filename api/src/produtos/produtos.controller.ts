@@ -2,16 +2,19 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Param,
-  Delete,
   Put,
-  NotFoundException,
-  UseGuards,
+  Delete,
+  Param,
+  Body,
   ParseIntPipe,
+  UseGuards,
   UseInterceptors,
   UploadedFile,
+  Inject,
+  NotFoundException,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL, CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { ProdutosService } from './produtos.service';
 import { Produto } from '../entity/produto.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,7 +26,19 @@ import { extname } from 'path';
 
 @Controller('produtos')
 export class ProdutosController {
-  constructor(private readonly produtosService: ProdutosService) {}
+  constructor(
+    private readonly produtosService: ProdutosService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
+
+  // Endpoint de teste de cache
+  @Get('teste-cache')
+  async testeCache() {
+    await this.cacheManager.set('teste', { ok: true }, 10);
+    const val = await this.cacheManager.get('teste');
+    console.log('Cache teste:', val);
+    return val;
+  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -40,24 +55,44 @@ export class ProdutosController {
       }),
     }),
   )
-  async create(
-    @Body() produto: Partial<Produto>,
-    @UploadedFile() imagem?: Express.Multer.File,
-  ) {
-    if (imagem) {
-      produto.imagem = imagem.filename;
-    }
-    return this.produtosService.create(produto);
+  async create(@Body() produto: Partial<Produto>, @UploadedFile() imagem?: Express.Multer.File) {
+    if (imagem) produto.imagem = imagem.filename;
+    const criado = await this.produtosService.create(produto);
+
+    // Limpa cache da lista de produtos
+    await this.cacheManager.del('produtos_todos');
+    console.log('Cache removido: produtos_todos (após create)');
+
+    return criado;
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('produtos_todos')
+  @CacheTTL(60)
   findAll() {
+    console.log('Buscando produtos - cache interceptor');
     return this.produtosService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.produtosService.findOne(id);
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60)
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const cacheKey = `produto_${id}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) {
+      console.log(`Cache hit: ${cacheKey}`);
+      return cached;
+    }
+
+    const produto = await this.produtosService.findOne(id);
+    if (!produto) throw new NotFoundException('Produto não encontrado');
+
+    await this.cacheManager.set(cacheKey, produto, 60);
+    console.log(`Produto salvo no cache: ${cacheKey}`);
+
+    return produto;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -75,106 +110,30 @@ export class ProdutosController {
       }),
     }),
   )
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() produto: Partial<Produto>,
-    @UploadedFile() imagem?: Express.Multer.File,
-  ) {
-    if (imagem) {
-      produto.imagem = imagem.filename;
-    }
-
+  async update(@Param('id', ParseIntPipe) id: number, @Body() produto: Partial<Produto>, @UploadedFile() imagem?: Express.Multer.File) {
+    if (imagem) produto.imagem = imagem.filename;
     const atualizado = await this.produtosService.update(id, produto);
-    if (!atualizado) {
-      throw new NotFoundException('Produto não encontrado ou nenhum campo para atualizar');
-    }
+    if (!atualizado) throw new NotFoundException('Produto não encontrado ou nenhum campo para atualizar');
+
+    // Limpa cache do produto específico e lista
+    await this.cacheManager.del(`produto_${id}`);
+    await this.cacheManager.del('produtos_todos');
+    console.log(`Cache removido: produto_${id} e produtos_todos (após update)`);
+
     return atualizado;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.produtosService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.produtosService.remove(id);
+
+    // Limpa cache
+    await this.cacheManager.del(`produto_${id}`);
+    await this.cacheManager.del('produtos_todos');
+    console.log(`Cache removido: produto_${id} e produtos_todos (após delete)`);
+
+    return { message: 'Produto removido com sucesso' };
   }
 }
-
-
-
-
-
-// import {
-//   Controller,
-//   Post,
-//   Get,
-//   Put,
-//   Delete,
-//   Param,
-//   Body,
-//   UploadedFile,
-//   UseInterceptors,
-//   UseGuards,
-// } from '@nestjs/common';
-// import { FileInterceptor } from '@nestjs/platform-express';
-// import { diskStorage } from 'multer';
-// import { extname } from 'path';
-// import { ProdutosService } from './produtos.service';
-// import { AuthGuard } from '../auth/auth.guard';
-// import { RolesGuard } from '../auth/roles.guard';
-// import { Roles } from '../auth/roles.decorator';
-
-// @Controller('produtos')
-// export class ProdutosController {
-//   constructor(private readonly produtosService: ProdutosService) {}
-
-//   @Get()
-//   async listarTodos() {
-//     return this.produtosService.findAll();
-//   }
-
-//   @Get(':id')
-//   async buscarPorId(@Param('id') id: number) {
-//     return this.produtosService.findById(id);
-//   }
-
-//   @Post()
-//   @UseGuards(AuthGuard, RolesGuard)
-//   @Roles('admin')
-//   async criarProduto(@Body() body: any) {
-//     return this.produtosService.create(body);
-//   }
-
-//   @Put(':id')
-//   @UseGuards(AuthGuard, RolesGuard)
-//   @Roles('admin')
-//   async atualizarProduto(@Param('id') id: number, @Body() body: any) {
-//     return this.produtosService.update(id, body);
-//   }
-
-//   @Delete(':id')
-//   @UseGuards(AuthGuard, RolesGuard)
-//   @Roles('admin')
-//   async removerProduto(@Param('id') id: number) {
-//     return this.produtosService.delete(id);
-//   }
-
-//   @Post(':id/imagem')
-//   @UseGuards(AuthGuard, RolesGuard)
-//   @Roles('admin')
-//   @UseInterceptors(FileInterceptor('imagem', {
-//     storage: diskStorage({
-//       destination: './uploads',
-//       filename: (req, file, cb) => {
-//         const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
-//         cb(null, uniqueName + extname(file.originalname));
-//       },
-//     }),
-//   }))
-//   async uploadImagemProduto(
-//     @Param('id') id: number,
-//     @UploadedFile() imagem: Express.Multer.File
-//   ) {
-//     const caminhoImagem = imagem ? imagem.filename : null;
-//     return this.produtosService.atualizarImagem(id, caminhoImagem);
-//   }
-// }
