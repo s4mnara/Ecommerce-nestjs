@@ -3,15 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Produto } from '../entity/produto.entity';
 import { ProdutosService } from './produtos.service';
 import { ProdutosController } from './produtos.controller';
-import { RedisCacheModule } from '../cache/cache.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Produto]),
-    RedisCacheModule,
+    RedisModule,
   ],
   controllers: [ProdutosController],
   providers: [ProdutosService],
-  exports: [ProdutosService, RedisCacheModule],
+  exports: [ProdutosService],
 })
 export class ProdutosModule {}

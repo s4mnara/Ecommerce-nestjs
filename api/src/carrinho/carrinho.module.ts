@@ -7,17 +7,17 @@ import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { CarrinhoService } from './carrinho.service';
 import { CarrinhoController } from './carrinho.controller';
 import { LogsModule } from 'src/logs-usuario/logs.module';
-import { RedisCacheModule } from 'src/cache/cache.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Carrinho, Usuario, Produto, ItemCarrinho]),
     LogsModule,
-    RedisCacheModule
+    RedisModule
   
   ],
   controllers: [CarrinhoController],
   providers: [CarrinhoService],
-  exports: [CarrinhoService, RedisCacheModule],
+  exports: [CarrinhoService],
 })
 export class CarrinhoModule {}

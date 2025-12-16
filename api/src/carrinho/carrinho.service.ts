@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import Redis from 'ioredis';
+
 import { Carrinho } from '../entity/carrinho.entity';
 import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
@@ -22,14 +28,34 @@ export class CarrinhoService {
     @InjectRepository(ItemCarrinho)
     private readonly itemCarrinhoRepository: Repository<ItemCarrinho>,
 
-    private readonly logsService: LogsService, // injetado
+    private readonly logsService: LogsService,
+
+    @Inject('REDIS_CLIENT')
+    private readonly redis: Redis,
   ) {}
 
-  async adicionarProduto(usuarioId: number, produtoId: number, quantidade: number) {
-    const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+  private readonly TTL = 120; // segundos
+
+  private carrinhoKey(usuarioId: number) {
+    return `carrinho:${usuarioId}`;
+  }
+
+  // ========================
+  // ADICIONAR PRODUTO
+  // ========================
+  async adicionarProduto(
+    usuarioId: number,
+    produtoId: number,
+    quantidade: number,
+  ) {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id: usuarioId },
+    });
     if (!usuario) throw new NotFoundException('Usuário não encontrado.');
 
-    const produto = await this.produtoRepository.findOne({ where: { id: produtoId } });
+    const produto = await this.produtoRepository.findOne({
+      where: { id: produtoId },
+    });
     if (!produto) throw new NotFoundException('Produto não encontrado.');
 
     let carrinho = await this.carrinhoRepository.findOne({
@@ -38,11 +64,17 @@ export class CarrinhoService {
     });
 
     if (!carrinho) {
-      carrinho = this.carrinhoRepository.create({ usuario, itens: [] });
+      carrinho = this.carrinhoRepository.create({
+        usuario,
+        itens: [],
+        total: 0,
+      });
       carrinho = await this.carrinhoRepository.save(carrinho);
     }
 
-    let item = carrinho.itens.find(i => i.produto.id === produto.id);
+    let item = carrinho.itens.find(
+      i => i.produto.id === produto.id,
+    );
 
     if (item) {
       item.quantidade += quantidade;
@@ -59,10 +91,14 @@ export class CarrinhoService {
       carrinho.itens.push(novoItem);
     }
 
-    carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+    carrinho.total = carrinho.itens.reduce(
+      (acc, i) => acc + i.subtotal,
+      0,
+    );
     await this.carrinhoRepository.save(carrinho);
 
-    // Registro de log personalizado
+    await this.redis.del(this.carrinhoKey(usuarioId));
+
     await this.logsService.registrarLog({
       usuarioId,
       acao: 'Adicionar produto ao carrinho',
@@ -72,8 +108,17 @@ export class CarrinhoService {
     return this.obterCarrinho(usuarioId);
   }
 
-  async atualizarQuantidade(usuarioId: number, produtoId: number, novaQuantidade: number) {
-    if (novaQuantidade <= 0) return this.removerProduto(usuarioId, produtoId);
+  // ========================
+  // ATUALIZAR QUANTIDADE
+  // ========================
+  async atualizarQuantidade(
+    usuarioId: number,
+    produtoId: number,
+    novaQuantidade: number,
+  ) {
+    if (novaQuantidade <= 0) {
+      return this.removerProduto(usuarioId, produtoId);
+    }
 
     const carrinho = await this.carrinhoRepository.findOne({
       where: { usuario: { id: usuarioId } },
@@ -81,15 +126,22 @@ export class CarrinhoService {
     });
     if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
 
-    const item = carrinho.itens.find(i => i.produto.id === produtoId);
+    const item = carrinho.itens.find(
+      i => i.produto.id === produtoId,
+    );
     if (!item) throw new NotFoundException('Produto não está no carrinho.');
 
     item.quantidade = novaQuantidade;
     item.subtotal = item.quantidade * item.produto.preco;
     await this.itemCarrinhoRepository.save(item);
 
-    carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+    carrinho.total = carrinho.itens.reduce(
+      (acc, i) => acc + i.subtotal,
+      0,
+    );
     await this.carrinhoRepository.save(carrinho);
+
+    await this.redis.del(this.carrinhoKey(usuarioId));
 
     await this.logsService.registrarLog({
       usuarioId,
@@ -100,6 +152,9 @@ export class CarrinhoService {
     return this.obterCarrinho(usuarioId);
   }
 
+  // ========================
+  // REMOVER PRODUTO
+  // ========================
   async removerProduto(usuarioId: number, produtoId: number) {
     const carrinho = await this.carrinhoRepository.findOne({
       where: { usuario: { id: usuarioId } },
@@ -107,13 +162,23 @@ export class CarrinhoService {
     });
     if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
 
-    const item = carrinho.itens.find(i => i.produto.id === produtoId);
+    const item = carrinho.itens.find(
+      i => i.produto.id === produtoId,
+    );
     if (!item) throw new NotFoundException('Produto não está no carrinho.');
 
     await this.itemCarrinhoRepository.remove(item);
-    carrinho.itens = carrinho.itens.filter(i => i.id !== item.id);
-    carrinho.total = carrinho.itens.reduce((acc, i) => acc + i.subtotal, 0);
+
+    carrinho.itens = carrinho.itens.filter(
+      i => i.id !== item.id,
+    );
+    carrinho.total = carrinho.itens.reduce(
+      (acc, i) => acc + i.subtotal,
+      0,
+    );
     await this.carrinhoRepository.save(carrinho);
+
+    await this.redis.del(this.carrinhoKey(usuarioId));
 
     await this.logsService.registrarLog({
       usuarioId,
@@ -124,6 +189,9 @@ export class CarrinhoService {
     return this.obterCarrinho(usuarioId);
   }
 
+  // ========================
+  // LIMPAR CARRINHO
+  // ========================
   async limparCarrinho(usuarioId: number) {
     const carrinho = await this.carrinhoRepository.findOne({
       where: { usuario: { id: usuarioId } },
@@ -132,48 +200,81 @@ export class CarrinhoService {
     if (!carrinho) throw new NotFoundException('Carrinho não encontrado.');
 
     await this.itemCarrinhoRepository.remove(carrinho.itens);
+
     carrinho.itens = [];
     carrinho.total = 0;
     await this.carrinhoRepository.save(carrinho);
+
+    await this.redis.del(this.carrinhoKey(usuarioId));
 
     await this.logsService.registrarLog({
       usuarioId,
       acao: 'Limpar carrinho',
     });
 
-    return { message: 'Carrinho limpo com sucesso.', total: 0, itens: [] };
+    return { message: 'Carrinho limpo com sucesso.' };
   }
 
+  // ========================
+  // OBTER CARRINHO (CACHE)
+  // ========================
   async obterCarrinho(usuarioId: number) {
+    const cacheKey = this.carrinhoKey(usuarioId);
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      console.log('Redis HIT:', cacheKey);
+      return JSON.parse(cached);
+    }
+
+    console.log('Redis MISS:', cacheKey);
+
     let carrinho = await this.carrinhoRepository.findOne({
       where: { usuario: { id: usuarioId } },
       relations: ['itens', 'itens.produto', 'usuario'],
     });
 
     if (!carrinho) {
-      const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+      const usuario = await this.usuarioRepository.findOne({
+        where: { id: usuarioId },
+      });
       if (!usuario) throw new NotFoundException('Usuário não encontrado.');
 
-      carrinho = this.carrinhoRepository.create({ usuario, itens: [], total: 0 });
+      carrinho = this.carrinhoRepository.create({
+        usuario,
+        itens: [],
+        total: 0,
+      });
       carrinho = await this.carrinhoRepository.save(carrinho);
     }
 
-    const itensFormatados = carrinho.itens.map(item => ({
+    const itens = carrinho.itens.map(item => ({
       id: item.produto.id,
       nome: item.produto.nome,
-      preco: parseFloat(item.produto.preco.toString()),
+      preco: Number(item.produto.preco),
       quantidade: item.quantidade,
       itemId: item.id,
     }));
 
-    const totalCalculado = itensFormatados.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+    const total = itens.reduce(
+      (acc, i) => acc + i.preco * i.quantidade,
+      0,
+    );
 
-    return {
+    const response = {
       id: carrinho.id,
-      usuarioId: usuarioId,
-      itens: itensFormatados,
-      total: totalCalculado.toFixed(2),
+      usuarioId,
+      itens,
+      total: total.toFixed(2),
     };
+
+    await this.redis.set(
+      cacheKey,
+      JSON.stringify(response),
+      'EX',
+      this.TTL,
+    );
+
+    return response;
   }
 }
-

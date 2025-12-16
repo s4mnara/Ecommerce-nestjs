@@ -15,10 +15,10 @@ import { Carrinho } from './entity/carrinho.entity';
 import { Pedido } from './entity/pedido.entity';
 import { ItemCarrinho } from './entity/item-carrinho.entity';
 import { ItemPedido } from './entity/item-pedido.entity';
-
+import { RedisModule } from './redis/redis.module';
 import { LogsModule } from './logs-usuario/logs.module';
 import { Log } from './entity/log.entity';
-import { RedisCacheModule } from './cache/cache.module';
+
 
 @Module({
   imports: [
@@ -48,7 +48,7 @@ import { RedisCacheModule } from './cache/cache.module';
     PedidosModule,
     ProdutosModule,
     PagamentosModule,
-    RedisCacheModule,
+    RedisModule,
   ],
 })
 export class AppModule {}
