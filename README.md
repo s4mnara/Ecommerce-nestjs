@@ -1,97 +1,158 @@
-
 # 🛒 Powerfit Suplementos - Plataforma de E-commerce
 
-Esta plataforma é um sistema completo de e-commerce focado na venda de suplementos, construído com uma arquitetura moderna baseada em microserviços/monorepo utilizando **React** para o frontend e **NestJS** para o backend, orquestrados via **Docker**.
+Esta plataforma é um sistema completo de e-commerce focado na venda de suplementos, construído com uma arquitetura moderna baseada em **monorepo/microserviços**, utilizando **React** no frontend e **NestJS** no backend, orquestrados via **Docker**.
 
 Desenvolvido por **Samara Araújo** e **Adriel Gomes**.
+
+---
 
 ## 🛠️ Tecnologias Utilizadas
 
 O projeto é dividido em duas partes principais:
 
-### Backend (loja_api)
-| Tecnologia | Descrição |
-| :--- | :--- |
-| **NestJS** | Framework Node.js para construção de APIs escaláveis. |
-| **TypeORM** | Mapeador Objeto-Relacional (ORM) para interação com o banco de dados. |
-| **TypeScript** | Linguagem principal para segurança e escalabilidade. |
-| **Autenticação JWT** | Segurança baseada em tokens para acesso (Admin e Cliente). |
+### Backend (`loja_api`)
 
-### Frontend (frontend)
-| Tecnologia | Descrição |
-| :--- | :--- |
-| **React** | Biblioteca JavaScript para construção da interface do usuário. |
-| **Vite / Create React App** | Ferramenta de build/bundling (depende da sua configuração local). |
-| **Axios** | Cliente HTTP para comunicação com a API REST. |
-| **Roteamento** | `react-router-dom` para navegação entre painéis. |
-| **Layout & Estilo** | Arquivos `.css` customizados com layout responsivo e design preto/amarelo. |
+| Tecnologia     | Descrição                                                          |
+| :------------- | :----------------------------------------------------------------- |
+| **NestJS**     | Framework Node.js para construção de APIs escaláveis e modulares.  |
+| **TypeORM**    | ORM para mapeamento objeto-relacional e persistência de dados.     |
+| **TypeScript** | Linguagem principal, garantindo tipagem forte e escalabilidade.    |
+| **PostgreSQL** | Banco de dados relacional.                                         |
+| **Redis**      | Cache em memória para alta performance (produtos, carrinho, etc.). |
+| **JWT**        | Autenticação e autorização baseada em tokens (Admin e Cliente).    |
+| **Docker**     | Containerização do backend e serviços de infraestrutura.           |
+
+### Frontend (`frontend`)
+
+| Tecnologia           | Descrição                                                           |
+| :------------------- | :------------------------------------------------------------------ |
+| **React**            | Biblioteca JavaScript para construção da interface do usuário.      |
+| **Vite / CRA**       | Ferramenta de build e bundling (conforme configuração local).       |
+| **Axios**            | Cliente HTTP para comunicação com a API REST.                       |
+| **React Router DOM** | Roteamento entre telas e painéis.                                   |
+| **CSS Puro**         | Estilização customizada com layout responsivo e tema preto/amarelo. |
 
 ### Orquestração
-* **Docker & Docker Compose**: Gerenciamento e execução do ambiente de desenvolvimento/produção.
+
+* **Docker & Docker Compose**: Gerenciamento do ambiente de desenvolvimento e produção.
+
+---
 
 ## 🚀 Como Executar o Projeto
 
-Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máquina.
+> Pré-requisitos: **Docker** e **Docker Compose** instalados.
 
-### 1. Clonar o Repositório
+### 1️⃣ Clonar o Repositório
 
 ```bash
-git clone [https://github.com/s4mnara/Ecommerce-nestjs.git](https://github.com/s4mnara/Ecommerce-nestjs.git)
+git clone https://github.com/s4mnara/Ecommerce-nestjs.git
 cd Ecommerce-nestjs
-````
+```
 
-### 2\. Configurar o Ambiente
+### 2️⃣ Configurar Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto (ou nas pastas de cada serviço, se for um monorepo) com as variáveis de ambiente necessárias para o banco de dados, JWT, e portas.
+Crie um arquivo `.env` na raiz do projeto (ou nos serviços correspondentes) com as variáveis necessárias:
 
-### 3\. Subir os Contêineres
+```env
+# Backend
+DB_HOST=loja_db
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=loja_db
 
-Execute o comando `docker-compose` para construir e iniciar todos os serviços (API e Frontend):
+JWT_SECRET=sua_chave_secreta
+
+# Redis
+REDIS_HOST=loja_redis
+REDIS_PORT=6379
+```
+
+### 3️⃣ Subir os Contêineres
 
 ```bash
 docker-compose up --build
 ```
 
-**Nota sobre Memória (ENOMEM):** Se o serviço `loja_api` falhar com um erro `ENOMEM`, você precisa **aumentar a alocação de memória RAM** para o Docker Desktop (Configurações \> Recursos \> Memória).
+⚠️ **Nota sobre Memória (ENOMEM)**
+Se o serviço `loja_api` falhar com erro `ENOMEM`, aumente a memória do Docker Desktop:
 
-### 4\. Acessar a Aplicação
+> Configurações → Recursos → Memória (recomendado ≥ 4GB)
 
-O frontend estará disponível em:
+### 4️⃣ Acessar a Aplicação
 
-  * **Acesso Cliente/Login:** `http://localhost:3000/login`
+* **Frontend / Login do Cliente:**
+  👉 `http://localhost:3000/login`
+
+* **API Backend:**
+  👉 `http://localhost:8080`
+
+---
 
 ## 📦 Funcionalidades da Aplicação
 
-### 1\. Autenticação & Usuários
+### 🔐 Autenticação & Usuários
 
-  * **Login/Registro**: Páginas de acesso com validação de credenciais. O layout é centralizado e apresenta a logo "Powerfit Suplementos" e o campo de login alinhado à esquerda.
-  * **Cargos**: O sistema diferencia entre `admin` e `cliente`.
+* Login e registro de usuários
+* Autenticação JWT
+* Controle de acesso por cargo (`admin` e `cliente`)
 
-### 2\. Painel Administrativo (`/dashboard`)
+### 🧑‍💼 Painel Administrativo (`/dashboard`)
 
-Acessível apenas por usuários com o cargo `admin`.
+Acessível apenas para usuários com papel **admin**:
 
-  * **Gerenciamento de Produtos**: CRUD (Criar, Ler, Atualizar, Deletar) de produtos, incluindo nome, descrição, preço, estoque e upload de imagem.
-  * **Visualização de Clientes**: Lista de clientes e seus dados básicos (e-mail, pedidos, itens no carrinho).
-  * **Pesquisa**: Barra de pesquisa unificada para produtos e clientes.
+* CRUD completo de produtos
+* Upload de imagens de produtos
+* Visualização de clientes
+* Pesquisa global (produtos e usuários)
+* logs dos usuários
 
-### 3\. Painel do Cliente (`/client`)
+### 🛍️ Painel do Cliente (`/client`)
 
-Acessível apenas por usuários com o cargo `cliente`.
+Acessível para usuários **cliente**:
 
-  * **Visualização de Produtos**: Carrossel responsivo de produtos disponíveis para compra.
-  * **Carrinho de Compras**: Funcionalidade para adicionar, remover e ajustar a quantidade de itens.
-  * **Finalização de Pedido**: Processamento do carrinho para histórico de pedidos.
-  * **Histórico de Pedidos**: Visualização dos pedidos finalizados.
+* Listagem e visualização de produtos
+* Carrinho de compras
+* Atualização de quantidades
+* Finalização de pedidos
+* Histórico de pedidos
+
+---
+
+## ⚡ Cache & Performance
+
+O sistema utiliza **Redis** para cache em memória, garantindo alta performance:
+
+* Cache de produtos (`produtos:all`, `produtos:{id}`)
+* Cache de carrinho por usuário (`carrinho:{usuarioId}`)
+* Invalidação automática ao criar, atualizar ou remover dados
+
+Todas as chaves podem ser visualizadas via:
+
+```bash
+docker exec -it loja_redis redis-cli
+keys *
+```
+
+---
 
 ## 🎨 Estrutura Visual
 
-O design adota um tema de alto contraste utilizando:
+O design segue uma identidade visual moderna com alto contraste:
 
-  * **Fundo**: Gradiente suave de preto para amarelo.
-  * **Cores de Ação**: Preto e amarelo (`--color-primary` e `--color-secondary`).
-  * **Componentes**: Layout responsivo otimizado para visualização em desktop e mobile.
+* **Cores principais:** Preto e Amarelo
+* **Tema:** Powerfit Suplementos
+* **Estilo:** Minimalista e focado em conversão
 
-## 🤝 Contribuições
+---
 
-Sinta-se à vontade para abrir *issues* para relatar bugs ou sugerir melhorias. Se quiser contribuir, por favor, faça um *fork* do projeto e envie um *pull request*!
+
+
+## 👩‍💻 Autores
+
+* **Samara Araújo**
+* **Adriel Gomes**
+
+---
+
+⭐ Se este projeto te ajudou, considere deixar uma estrela no repositório!
