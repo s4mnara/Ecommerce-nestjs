@@ -1,48 +1,63 @@
-# 🛒 Powerfit Suplementos - Plataforma de E-commerce
+# 🛒 Powerfit Suplementos — Plataforma de E‑commerce
 
-Esta plataforma é um sistema completo de e-commerce focado na venda de suplementos, construído com uma arquitetura moderna baseada em **monorepo/microserviços**, utilizando **React** no frontend e **NestJS** no backend, orquestrados via **Docker**.
+Plataforma completa de **e‑commerce para suplementos**, construída com **arquitetura moderna em containers**, separando **Frontend** e **Backend** e utilizando **cache, autenticação JWT e banco relacional**.
 
-Desenvolvido por **Samara Araújo** e **Adriel Gomes**.
+> Projeto acadêmico/desenvolvimento prático utilizando **React**, **NestJS**, **PostgreSQL**, **Redis** e **Docker**.
+
+**Autores:** Samara Araújo & Adriel Gomes
+
+---
+
+## 🧱 Visão Geral da Arquitetura
+
+* Arquitetura **Frontend + API REST**
+* Backend modular com **NestJS**
+* **Redis** para cache de alto desempenho
+* **PostgreSQL** para persistência de dados
+* Autenticação baseada em **JWT**
+* Orquestração via **Docker Compose**
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-O projeto é dividido em duas partes principais:
+### 🔧 Backend — `loja_api`
 
-### Backend (`loja_api`)
+| Tecnologia     | Descrição                                          |
+| -------------- | -------------------------------------------------- |
+| **NestJS**     | Framework Node.js para APIs escaláveis e modulares |
+| **TypeORM**    | ORM para mapeamento objeto‑relacional              |
+| **TypeScript** | Tipagem forte e melhor manutenção                  |
+| **PostgreSQL** | Banco de dados relacional                          |
+| **Redis**      | Cache em memória (produtos, carrinho, etc.)        |
+| **JWT**        | Autenticação e autorização (Admin / Cliente)       |
+| **Docker**     | Containerização do backend                         |
 
-| Tecnologia     | Descrição                                                          |
-| :------------- | :----------------------------------------------------------------- |
-| **NestJS**     | Framework Node.js para construção de APIs escaláveis e modulares.  |
-| **TypeORM**    | ORM para mapeamento objeto-relacional e persistência de dados.     |
-| **TypeScript** | Linguagem principal, garantindo tipagem forte e escalabilidade.    |
-| **PostgreSQL** | Banco de dados relacional.                                         |
-| **Redis**      | Cache em memória para alta performance (produtos, carrinho, etc.). |
-| **JWT**        | Autenticação e autorização baseada em tokens (Admin e Cliente).    |
-| **Docker**     | Containerização do backend e serviços de infraestrutura.           |
+### 🎨 Frontend — `frontend`
 
-### Frontend (`frontend`)
+| Tecnologia           | Descrição                              |
+| -------------------- | -------------------------------------- |
+| **React**            | Interface do usuário                   |
+| **Vite**             | Build e desenvolvimento                |
+| **Axios**            | Comunicação com a API                  |
+| **React Router DOM** | Roteamento                             |
+| **CSS puro**         | Estilização responsiva (preto/amarelo) |
 
-| Tecnologia           | Descrição                                                           |
-| :------------------- | :------------------------------------------------------------------ |
-| **React**            | Biblioteca JavaScript para construção da interface do usuário.      |
-| **Vite / CRA**       | Ferramenta de build e bundling (conforme configuração local).       |
-| **Axios**            | Cliente HTTP para comunicação com a API REST.                       |
-| **React Router DOM** | Roteamento entre telas e painéis.                                   |
-| **CSS Puro**         | Estilização customizada com layout responsivo e tema preto/amarelo. |
+### 📦 Infraestrutura
 
-### Orquestração
-
-* **Docker & Docker Compose**: Gerenciamento do ambiente de desenvolvimento e produção.
+* **Docker**
+* **Docker Compose**
 
 ---
 
-
-
 ## 🚀 Como Executar o Projeto
 
-> Pré-requisitos: **Docker** e **Docker Compose** instalados.
+### ✔️ Pré‑requisitos
+
+* Docker
+* Docker Compose
+
+---
 
 ### 1️⃣ Clonar o Repositório
 
@@ -51,12 +66,13 @@ git clone https://github.com/s4mnara/Ecommerce-nestjs.git
 cd Ecommerce-nestjs
 ```
 
+---
+
 ### 2️⃣ Configurar Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto (ou nos serviços correspondentes) com as variáveis necessárias:
+Crie um arquivo `.env` (backend):
 
 ```env
-# Backend
 DB_HOST=loja_db
 DB_PORT=5432
 DB_USERNAME=postgres
@@ -65,71 +81,79 @@ DB_DATABASE=loja_db
 
 JWT_SECRET=sua_chave_secreta
 
-# Redis
 REDIS_HOST=loja_redis
 REDIS_PORT=6379
 ```
 
-### 3️⃣ Subir os Contêineres
+---
+
+### 3️⃣ Subir os Containers
 
 ```bash
 docker-compose up --build
 ```
 
-⚠️ **Nota sobre Memória (ENOMEM)**
-Se o serviço `loja_api` falhar com erro `ENOMEM`, aumente a memória do Docker Desktop:
+⚠️ **Erro ENOMEM (NestJS)**
 
-> Configurações → Recursos → Memória (recomendado ≥ 4GB)
+Caso o container `loja_api` falhe, aumente a memória do Docker Desktop:
 
-### 4️⃣ Acessar a Aplicação
-
-* **Frontend / Login do Cliente:**
-  👉 `http://localhost:3000/login`
-
-* **API Backend:**
-  👉 `http://localhost:8080`
+> Settings → Resources → Memory → **mínimo 4GB**
 
 ---
 
-## 📦 Funcionalidades da Aplicação
+### 4️⃣ Acessar a Aplicação
 
-### 🔐 Autenticação & Usuários
+* **Frontend (Cliente / Admin)**
+  👉 [http://localhost:3000/login](http://localhost:3000/login)
 
-* Login e registro de usuários
-* Autenticação JWT
-* Controle de acesso por cargo (`admin` e `cliente`)
+* **API Backend**
+  👉 [http://localhost:8080](http://localhost:8080)
 
-### 🧑‍💼 Painel Administrativo (`/dashboard`)
+---
 
-Acessível apenas para usuários com papel **admin**:
+## 📦 Funcionalidades
+
+### 🔐 Autenticação
+
+* Registro e login de usuários
+* JWT com controle de papéis
+* Perfis: `admin` e `cliente`
+
+---
+
+### 🧑‍💼 Painel Administrativo — `/dashboard`
+
+Acesso restrito a **admins**:
 
 * CRUD completo de produtos
-* Upload de imagens de produtos
+* Upload de imagens
 * Visualização de clientes
-* Pesquisa global (produtos e usuários)
-* logs dos usuários
+* Pesquisa global
+* Logs de usuários
 
-### 🛍️ Painel do Cliente (`/client`)
+---
 
-Acessível para usuários **cliente**:
+### 🛍️ Área do Cliente — `/client`
 
-* Listagem e visualização de produtos
+* Listagem de produtos
 * Carrinho de compras
-* Atualização de quantidades
+* Alteração de quantidades
 * Finalização de pedidos
 * Histórico de pedidos
 
 ---
 
-## ⚡ Cache & Performance
+## ⚡ Cache e Performance (Redis)
 
-O sistema utiliza **Redis** para cache em memória, garantindo alta performance:
+Chaves utilizadas:
 
-* Cache de produtos (`produtos:all`, `produtos:{id}`)
-* Cache de carrinho por usuário (`carrinho:{usuarioId}`)
-* Invalidação automática ao criar, atualizar ou remover dados
+* `produtos:all`
+* `produtos:{id}`
+* `carrinho:{usuarioId}`
 
-Todas as chaves podem ser visualizadas via:
+Invalidação automática em operações de **create / update / delete**.
+
+Visualizar chaves:
 
 ```bash
 docker exec -it loja_redis redis-cli
@@ -138,51 +162,53 @@ keys *
 
 ---
 
-## 🎨 Estrutura Visual
+## 🎨 Identidade Visual
 
-O design segue uma identidade visual moderna com alto contraste:
-
-* **Cores principais:** Preto e Amarelo
-* **Tema:** Powerfit Suplementos
-* **Estilo:** Minimalista e focado em conversão
+* Tema: **Powerfit Suplementos**
+* Cores: **Preto e Amarelo**
+* Estilo: **Minimalista e focado em conversão**
 
 ---
 
-## 🔷 Diagrama de Arquitetura
+## Arquitetura em Camadas (Layered Architecture) com Cache-Aside Pattern
+
+* Frontend desacoplado
+* API REST centralizadora
+* Cache Redis controlado pela aplicação
+* Banco relacional como fonte de verdade
+* Autenticação JWT integrada à API
 
 ```mermaid
 flowchart LR
-    subgraph Cliente
-        Browser["Navegador (Usuário)"]
-    end
+    User[Usuario - Browser]
 
     subgraph Frontend
-        React["React • Powerfit UI"]
+        FE[React - Powerfit UI]
     end
 
     subgraph Backend
-        API["NestJS API • loja_api"]
-        Auth["JWT Auth"]
-        Cache["Redis Cache"]
+        API[NestJS API]
+        AUTH[JWT Auth]
+        CACHE[Redis Cache]
     end
 
-    subgraph Banco_de_Dados
-        DB["PostgreSQL"]
+    subgraph Database
+        DB[(PostgreSQL)]
     end
 
-    Browser -->|HTTP/HTTPS| React
-    React -->|REST API (Axios)| API
+    User --> FE
+    FE -->|HTTP REST| API
 
-    API -->|Validação| Auth
-    API -->|Leitura / Escrita| Cache
-    API -->|Persistência| DB
+    API --> AUTH
+    API --> CACHE
+    API --> DB
 
-    Cache -->|Cache Hit / Miss| API
+    CACHE --> API
+
+
 ```
 
 ---
-
-
 
 ## 👩‍💻 Autores
 
@@ -191,4 +217,5 @@ flowchart LR
 
 ---
 
-⭐ Se este projeto te ajudou, considere deixar uma estrela no repositório!
+⭐ Se este projeto te ajudou, deixe uma estrela no repositório!
+
