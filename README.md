@@ -38,6 +38,8 @@ O projeto é dividido em duas partes principais:
 
 ---
 
+
+
 ## 🚀 Como Executar o Projeto
 
 > Pré-requisitos: **Docker** e **Docker Compose** instalados.
@@ -143,6 +145,40 @@ O design segue uma identidade visual moderna com alto contraste:
 * **Cores principais:** Preto e Amarelo
 * **Tema:** Powerfit Suplementos
 * **Estilo:** Minimalista e focado em conversão
+
+---
+
+## 🔷 Diagrama de Arquitetura
+
+```mermaid
+flowchart LR
+    subgraph Cliente
+        Browser["Navegador (Usuário)"]
+    end
+
+    subgraph Frontend
+        React["React • Powerfit UI"]
+    end
+
+    subgraph Backend
+        API["NestJS API • loja_api"]
+        Auth["JWT Auth"]
+        Cache["Redis Cache"]
+    end
+
+    subgraph Banco_de_Dados
+        DB["PostgreSQL"]
+    end
+
+    Browser -->|HTTP/HTTPS| React
+    React -->|REST API (Axios)| API
+
+    API -->|Validação| Auth
+    API -->|Leitura / Escrita| Cache
+    API -->|Persistência| DB
+
+    Cache -->|Cache Hit / Miss| API
+```
 
 ---
 
