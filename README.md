@@ -244,7 +244,7 @@ O workflow está definido em:
 
 Exemplo de execução no GitHub Actions:
 
-![GitHub Actions CI](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)
+![CI/CD](https://github.com/s4mnara/Ecommerce-nestjs/actions/workflows/ci.yml/badge.svg)
 
 > Cada push ou pull request dispara automaticamente a pipeline, garantindo que **qualquer alteração no backend ou frontend seja validada antes de ir para produção**.
 
