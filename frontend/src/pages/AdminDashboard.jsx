@@ -6,7 +6,6 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const BASE_IMAGE_URL = 'http://localhost:8080/uploads/';
 
-/* ====================== COMPONENTES (sem alterações) ====================== */
 const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
   <div className="produto-form-panel" style={{ marginTop: '20px' }}>
     <h3>Itens no Inventário</h3>
@@ -83,7 +82,6 @@ const UsuariosTable = ({ usuarios, removerUsuario }) => (
   </div>
 );
 
-/* ====================== PAINEL DE LOGS (sem alterações) ====================== */
 const LogsPanel = ({ logs }) => {
   const [usuarioFiltro, setUsuarioFiltro] = useState('');
   const [metodoFiltro, setMetodoFiltro] = useState('');
@@ -155,7 +153,6 @@ const LogsPanel = ({ logs }) => {
   );
 };
 
-/* ====================== ADMIN DASHBOARD ====================== */
 function AdminDashboard({ onLogout }) {
   const [produtos, setProdutos] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -181,7 +178,6 @@ function AdminDashboard({ onLogout }) {
       setProdutos(res.data);
     } catch (err) {
       toast.error('Erro ao carregar produtos');
-      console.error(err);
     }
   };
 
@@ -191,7 +187,6 @@ function AdminDashboard({ onLogout }) {
       setUsuarios(res.data);
     } catch (err) {
       toast.error('Erro ao carregar usuários');
-      console.error(err);
     }
   };
 
@@ -201,7 +196,6 @@ function AdminDashboard({ onLogout }) {
       setLogs(res.data);
     } catch (err) {
       toast.error('Erro ao carregar logs');
-      console.error(err);
     }
   };
 
@@ -210,35 +204,43 @@ function AdminDashboard({ onLogout }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.nome.trim()) return toast.warn("O nome é obrigatório");
+    if (parseFloat(form.preco) <= 0) return toast.warn("O preço deve ser positivo");
+    if (parseInt(form.estoque) < 0) return toast.warn("O estoque não pode ser negativo");
+    if (form.imagem && !form.imagem.type.startsWith('image/')) return toast.error("Selecione um arquivo de imagem válido");
+
     const formData = new FormData();
-    formData.append('nome', form.nome);
+    formData.append('nome', form.nome.trim());
     formData.append('descricao', form.descricao);
     formData.append('preco', parseFloat(form.preco));
     formData.append('estoque', parseInt(form.estoque));
     if (form.imagem) formData.append('imagem', form.imagem);
+
+    const loadId = toast.loading(editando ? "Atualizando..." : "Salvando...");
 
     try {
       let res;
       if (editando) {
         res = await api.put(`/produtos/${form.id}`, formData);
         setProdutos(prev => prev.map(p => p.id === form.id ? { ...p, ...res.data } : p));
-        toast.success('Produto atualizado com sucesso!');
+        toast.update(loadId, { render: "Produto atualizado!", type: "success", isLoading: false, autoClose: 3000 });
       } else {
         res = await api.post('/produtos', formData);
         setProdutos(prev => [...prev, res.data]);
-        toast.success('Produto adicionado com sucesso!');
+        toast.update(loadId, { render: "Produto cadastrado!", type: "success", isLoading: false, autoClose: 3000 });
       }
       setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null });
       setEditando(false);
     } catch (err) {
-      toast.error('Erro ao salvar produto');
-      console.error(err);
+      toast.update(loadId, { render: "Erro ao processar solicitação", type: "error", isLoading: false, autoClose: 3000 });
     }
   };
 
   const editarProduto = (produto) => {
     setForm({ ...produto, imagem: null, preco: String(produto.preco), estoque: String(produto.estoque) });
     setEditando(true);
+    toast.info("Editando produto: " + produto.nome);
   };
 
   const removerProduto = async (id) => {
@@ -246,10 +248,9 @@ function AdminDashboard({ onLogout }) {
     try {
       await api.delete(`/produtos/${id}`);
       setProdutos(prev => prev.filter(p => p.id !== id));
-      toast.success('Produto removido com sucesso!');
+      toast.success('Produto removido!');
     } catch (err) {
       toast.error('Erro ao remover produto');
-      console.error(err);
     }
   };
 
@@ -258,10 +259,9 @@ function AdminDashboard({ onLogout }) {
     try {
       await api.delete(`/usuarios/${id}`);
       setUsuarios(prev => prev.filter(u => u.id !== id));
-      toast.success('Usuário removido com sucesso!');
+      toast.success('Usuário removido!');
     } catch (err) {
       toast.error('Erro ao remover usuário');
-      console.error(err);
     }
   };
 
@@ -294,12 +294,10 @@ function AdminDashboard({ onLogout }) {
 
       <div className="dashboard-body-container">
         <Sidebar />
-        <div className="produtos-section-wrapper main-content-full"
-         >
+        <div className="produtos-section-wrapper main-content-full">
           {activeMenu === 'Dashboard' && (
             <>
-              <div className="produto-form-panel"
-              >
+              <div className="produto-form-panel">
                 <h3>{editando ? 'Editar Produto' : 'Adicionar Novo Produto'}</h3>
                 <form onSubmit={handleSubmit} encType="multipart/form-data">
                   <label>Nome</label>
@@ -316,6 +314,7 @@ function AdminDashboard({ onLogout }) {
                   <label>Estoque</label>
                   <input type="number" name="estoque" value={form.estoque} onChange={handleChange} required />
                   <button type="submit" className="button submit-button">{editando ? 'Salvar Alterações' : 'Salvar Item'}</button>
+                  {editando && <button type="button" className="button" style={{marginTop: '10px', background: '#666'}} onClick={() => { setEditando(false); setForm({ id: null, nome: '', descricao: '', preco: '', estoque: '', imagem: null }); }}>Cancelar</button>}
                 </form>
               </div>
               <InventoryTable produtos={produtos} editarProduto={editarProduto} removerProduto={removerProduto} />
@@ -334,4 +333,3 @@ function AdminDashboard({ onLogout }) {
 }
 
 export default AdminDashboard;
-
