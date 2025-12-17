@@ -173,7 +173,7 @@ a:hover {
 }
 
 .save-item-button:hover {
-    background-color: var(--color-accent-yellow);
+    background-color: var(--color-background-light);
     transform: scale(1.03);
 }
 
@@ -184,17 +184,25 @@ form {
 }
 
 input, select {
-    padding: 10px;
+    padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--color-gray-border);
     outline: none;
     font-size: 16px;
     background-color: var(--color-background-dark);
     color: var(--color-white);
+    transition: all 0.3s ease-in-out;
 }
 
 input:focus, select:focus {
     border-color: var(--color-secondary);
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.4);
+    animation: pulse-glow 2s infinite;
+}
+@keyframes pulse-glow {
+    0% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.6); }
+    100% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.3); }
 }
 
 .admin-dashboard {
@@ -202,6 +210,7 @@ input:focus, select:focus {
     flex-direction: column;
     width: 100%;
     background-color: var(--color-background-dark);
+    height: 100vh;
 }
 
 .dashboard-header {
@@ -220,6 +229,7 @@ input:focus, select:focus {
     flex-wrap: wrap;
     box-sizing: border-box;
     height: 60px; 
+    flex-shrink: 0;
 }
 
 
@@ -347,6 +357,8 @@ input:focus, select:focus {
     width: 100%;
     align-items: flex-start;
     gap: 20px;
+    flex: 1;
+    overflow: hidden;
     
     /* Padding para espaçamento interno */
     padding-top: 20px; /* Espaço entre o topo (após a margem) e o conteúdo */
@@ -413,6 +425,7 @@ input:focus, select:focus {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    overflow-y: auto;
 }
 
 .main-content-full {
@@ -475,7 +488,7 @@ input:focus, select:focus {
 }
 
 .submit-button:hover {
-    background-color: var(--color-accent-yellow);
+    background-color: var(--color-background-light);
 }
 
 .cancel-button {
@@ -506,8 +519,9 @@ input:focus, select:focus {
 }
 
 .produto-card {
-    min-width: 200px;
-    max-width: 200px;
+    min-width: 220px !important; /* Aumentei um pouco a largura mínima */
+    max-width: 250px !important;
+    min-height: 380px;
     border: 1px solid var(--color-gray-border);
     border-radius: 10px;
     padding: 15px;
@@ -517,12 +531,28 @@ input:focus, select:focus {
     flex-shrink: 0;
     display: flex; 
     flex-direction: column;
-    height: 100%;
+    height: auto !important;
     scroll-snap-align: start;
 }
 
+.produto-card h3 {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    height: auto !important;
+    min-height: 3em; /* Garante espaço para até 2 ou 3 linhas */
+    line-height: 1.2;
+    text-align: left;
+}
+
+.produto-descricao {
+    white-space: normal !important;
+    word-wrap: break-word;
+    margin-bottom: 10px;
+}
+
 .produto-card .add-button {
-    margin-top: auto;
+    margin-top: auto !important;
     width: 100%;
 }
 
@@ -651,10 +681,12 @@ input:focus, select:focus {
     top: 0;
     right: 0;
     height: 100vh;
-    width: 350px;
+    width: 420px !important;
     max-width: 90%;
     z-index: 100;
     padding-top: 80px;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
     background-color: var(--color-background-light); 
     box-shadow: -4px 0 10px rgba(0, 0, 0, 0.5);
 }
@@ -676,11 +708,28 @@ input:focus, select:focus {
     border-radius: 5px;
     z-index: 10; 
 }
-
 .cart-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    display: flex !important; /* Mudamos de Grid para Flex */
+    flex-direction: column !important; /* Empilha as informações */
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 15px !important;
+    height: auto !important; /* Permite que o card cresça com o texto */
+}
+
+.cart-item div:first-child {
+    width: 100%;
+}
+
+.cart-item span {
+    white-space: normal !important; /* ESSENCIAL: Permite quebra de linha */
+    display: block !important;
+    line-height: 1.4;
+    font-size: 1rem;
+}
+.cart-item .button.remove-button {
+    align-self: flex-end; /* Joga o botão remover para o canto direito */
+    margin-top: -30px; /* Ajuste fino de posição */
 }
 
 .remove-button { 
@@ -716,7 +765,7 @@ input:focus, select:focus {
     }
     
     .side-panel-fixed {
-        width: 100%;
+        width: 100% !important;
         max-width: 100%;
     }
     

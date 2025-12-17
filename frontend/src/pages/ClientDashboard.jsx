@@ -229,7 +229,7 @@ function ClientDashboard({ onLogout }) {
             {carrinho.map(item => (
               <li key={item.id} className="cliente-card cart-item" style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px', gap: '10px', alignItems: 'center', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--color-gray-border)' }}>
                 <div>
-                  <span style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nome}</span>
+                  <span style={{ fontWeight: 'bold', display: 'block', lineHeight: '1.2', marginBottom: '4px' }}>{item.nome}</span>
                   <span style={{ display: 'block', fontSize: '0.9em', color: 'var(--color-secondary)' }}>R$ {(item.preco * item.quantidade).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
