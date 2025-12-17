@@ -210,6 +210,51 @@ flowchart LR
 
 ---
 
+## ⚙️ CI/CD Full‑Stack
+
+Este projeto possui **pipeline de CI/CD** configurado com **GitHub Actions**, garantindo que **backend e frontend** sejam testados e buildados automaticamente a cada **push** ou **pull request** nas branches `main` ou `develop`.
+
+### 🔹 Funcionalidades do CI/CD
+
+1. **Backend NestJS (`loja_api`)**
+   - Instala dependências
+   - Roda testes unitários (`npm test`)
+   - Builda a aplicação (`npm run build`)
+   - Gera a imagem Docker (`loja_api`)
+
+2. **Frontend React (`frontend`)**
+   - Instala dependências
+   - Roda testes (`npm test`)
+   - Builda o projeto (`npm run build`)
+   - Gera a imagem Docker (`loja_frontend`)
+
+3. **Serviços de suporte**
+   - PostgreSQL para testes do backend
+   - Redis para cache e testes de performance
+
+### 🔹 Como visualizar o CI/CD
+
+O workflow está definido em:
+
+```
+
+.github/workflows/ci.yml
+
+```
+
+Exemplo de execução no GitHub Actions:
+
+![GitHub Actions CI](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)
+
+> Cada push ou pull request dispara automaticamente a pipeline, garantindo que **qualquer alteração no backend ou frontend seja validada antes de ir para produção**.
+
+
+
+---
+
+
+
+
 ## 👩‍💻 Autores
 
 * **Samara Araújo**

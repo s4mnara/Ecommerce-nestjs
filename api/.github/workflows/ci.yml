@@ -1,0 +1,94 @@
+name: CI/CD - Fullstack Ecommerce
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  fullstack:
+    runs-on: ubuntu-latest
+
+    services:
+      # Banco de dados para backend
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: loja_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d loja_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      # Redis para backend
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      # Backend env
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: loja_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: test_secret
+
+      # Frontend env (se precisar, pode adicionar)
+      REACT_APP_API_URL: http://localhost:3000
+
+    steps:
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+    
+      - name: Setup Node.js (backend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install dependencies (backend)
+        working-directory: api
+        run: npm install
+
+      - name: Run tests (backend)
+        working-directory: api
+        run: npm test
+
+      - name: Build NestJS (backend)
+        working-directory: api
+        run: npm run build
+
+      - name: Build Docker image (backend)
+        run: docker build -t loja_api ./api
+
+      
+      - name: Setup Node.js (frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (frontend)
+        working-directory: frontend
+        run: npm install
+
+      - name: Build React (frontend)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build Docker image (frontend)
+        run: docker build -t loja_frontend ./frontend
