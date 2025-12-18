@@ -1,10 +1,10 @@
 name: Deploy to EC2
 
-on:  
+on:   
   push:  
     branches: [main]
 
-jobs:  
+jobs:   
   deploy: 
     runs-on: self-hosted
     
@@ -16,45 +16,38 @@ jobs:
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           
-          cat > api/. env << 'EOF'
-          PORT=3000
-          NODE_ENV=production
-          DB_HOST=db
-          DB_PORT=5432
-          DB_USERNAME=postgres
-          DB_PASSWORD=postgres
-          DB_DATABASE=loja_db
-          JWT_SECRET=seuSegredoAqui
-          JWT_EXPIRES_IN=7d
-          APP_NAME=api-loja
-          LOG_LEVEL=info
-          REDIS_HOST=loja_redis
-          REDIS_PORT=6379
-          EOF
-          
-          # Adicionar FRONTEND_URL
-          echo "FRONTEND_URL=http://$PUBLIC_IP:3000" >> api/.env
+          printf "PORT=3000\n\
+          NODE_ENV=production\n\
+          DB_HOST=db\n\
+          DB_PORT=5432\n\
+          DB_USERNAME=postgres\n\
+          DB_PASSWORD=postgres\n\
+          DB_DATABASE=loja_db\n\
+          JWT_SECRET=seuSegredoAqui\n\
+          JWT_EXPIRES_IN=7d\n\
+          APP_NAME=api-loja\n\
+          LOG_LEVEL=info\n\
+          REDIS_HOST=loja_redis\n\
+          REDIS_PORT=6379\n\
+          FRONTEND_URL=http://$PUBLIC_IP:3000\n" > api/.env
           
           echo "=== Backend .env criado ==="
           cat api/.env
 
-      - name: Create frontend .env
+      - name: Create frontend . env
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
-          
-          cat > frontend/.env << EOF
-          REACT_APP_API_URL=http://$PUBLIC_IP:8080
-          EOF
+          echo "REACT_APP_API_URL=http://$PUBLIC_IP:8080" > frontend/.env
           
           echo "=== Frontend .env criado ==="
-          cat frontend/. env
+          cat frontend/.env
 
       - name: Stop ALL old containers
         run: |
           docker-compose down || true
           docker stop $(docker ps -aq) 2>/dev/null || true
           docker rm $(docker ps -aq) 2>/dev/null || true
-          sudo lsof -ti: 3000 | xargs sudo kill -9 2>/dev/null || true
+          sudo lsof -ti:3000 | xargs sudo kill -9 2>/dev/null || true
           sudo lsof -ti:8080 | xargs sudo kill -9 2>/dev/null || true
 
       - name: Build and start services
@@ -77,7 +70,7 @@ jobs:
           docker exec loja_redis redis-cli ping || echo "⚠️ Not ready"
 
       - name: Show logs
-        run: |
+        run:  |
           echo "=== API Logs ==="
           docker-compose logs --tail=20 api
           echo ""
@@ -91,15 +84,15 @@ jobs:
         run: |
           docker image prune -f
 
-      - name:  Deployment info
-        run: |
+      - name: Deployment info
+        run:  |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           echo "========================================"
           echo "🚀 Deploy Completo!"
           echo "========================================"
-          echo "Frontend:  http://$PUBLIC_IP:3000"
-          echo "Backend:   http://$PUBLIC_IP:8080"
-          echo "Database:  $PUBLIC_IP:5432"
+          echo "Frontend: http://$PUBLIC_IP:3000"
+          echo "Backend:  http://$PUBLIC_IP:8080"
+          echo "Database: $PUBLIC_IP:5432"
           echo "Redis:    $PUBLIC_IP:6379"
           echo "========================================"
           docker-compose ps
