@@ -10,23 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️ Pegar o código do repositório
+      # 1️⃣ Pegar o código do repositório
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️ Configurar a chave SSH
+      # 2️⃣ Configurar a chave SSH
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️ Criar diretório e copiar arquivos para a EC2
+      # 3️⃣ Criar diretório e copiar arquivos para a EC2
       - name: Copy files to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
           scp -o StrictHostKeyChecking=no -r ./* ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
-      # 4️ Build e deploy do Docker na EC2
+      # 4️⃣ Build e deploy do Docker na EC2
       - name: Deploy Docker
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
