@@ -6,7 +6,7 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
-//  Não definimos Content-Type fixo — axios faz isso automaticamente
+
 api. interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
