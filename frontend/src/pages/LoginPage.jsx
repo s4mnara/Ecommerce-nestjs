@@ -72,9 +72,11 @@ function LoginPage({ onLoginSuccess }) {
 
       <p style={{ textAlign: "center", marginTop: "15px" }}>
         Não tem conta?{" "}
-        <a href="#" onClick={() => navigate("/register")}>
-          Criar conta
-        </a>
+  <button type="button" className="link-button" onClick={() => navigate("/register")}>
+  Criar conta
+</button>
+
+
       </p>
     </div>
   );

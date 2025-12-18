@@ -72,9 +72,10 @@ function RegisterPage() {
 
       <p style={{ textAlign: "center", marginTop: "15px" }}>
         Já tem conta?{" "}
-        <a href="#" onClick={() => navigate("/login")}>
-          Fazer login
-        </a>
+        <button type="button" className="link-button" onClick={() => navigate("/login")}>
+  Fazer login
+</button>
+
       </p>
     </div>
   );

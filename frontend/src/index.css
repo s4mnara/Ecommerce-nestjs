@@ -129,6 +129,14 @@ form label {
     margin-bottom: 2px;
 }
 
+.link-button {
+  all: unset;
+  cursor: pointer;
+  color: var(--color-secondary);
+}
+.link-button:hover {
+  color: var(--color-accent-yellow);
+}
 
 a {
     color: var(--color-secondary);
