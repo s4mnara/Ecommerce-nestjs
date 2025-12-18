@@ -1,7 +1,7 @@
 name: Deploy to EC2
 
 on:
-  push:  
+  push: 
     branches: [main]
 
 jobs:
@@ -12,34 +12,64 @@ jobs:
       - name: Checkout code
         uses:  actions/checkout@v4
 
+      - name: Create backend .env with secrets
+        run: |
+          cat > api/.env << 'EOF'
+          PORT=3000
+          NODE_ENV=production
+          DB_HOST=db
+          DB_PORT=5432
+          DB_USERNAME=postgres
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_DATABASE=loja_db
+          JWT_SECRET=${{ secrets. JWT_SECRET }}
+          JWT_EXPIRES_IN=7d
+          APP_NAME=api-loja
+          LOG_LEVEL=info
+          REDIS_HOST=loja_redis
+          REDIS_PORT=6379
+          EOF
+
+      - name: Create frontend .env
+        run: |
+          PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
+          cat > frontend/.env << EOF
+          REACT_APP_API_URL=http://\$PUBLIC_IP:8080
+          EOF
+
       - name: Stop old containers
         run: |
-          docker stop frontend backend 2>/dev/null || true
-          docker rm frontend backend 2>/dev/null || true
+          docker-compose down || true
 
-      - name: Build frontend
+      - name: Build and start services
         run: |
-          docker build -t frontend:latest -f frontend/Dockerfile frontend
+          docker-compose up -d --build
 
-      - name: Build backend
+      - name: Wait for services
         run: |
-          docker build -t backend:latest -f api/Dockerfile api
+          echo "Aguardando serviços iniciarem..."
+          sleep 20
 
-      - name:  Run frontend (porta 3000)
+      - name: Check health
         run: |
-          docker run -d --name frontend --restart unless-stopped -p 3000:3000 frontend:latest
+          docker-compose ps
+          docker exec loja_db pg_isready -U postgres || echo "⚠️ Database not ready"
+          docker exec loja_redis redis-cli ping || echo "⚠️ Redis not ready"
 
-      - name:  Run backend (porta 8080)
+      - name: Show logs
         run: |
-          docker run -d --name backend --restart unless-stopped -p 8080:8080 backend:latest
+          docker-compose logs --tail=30
 
-      - name:  Cleanup
+      - name: Cleanup
         run: |
           docker image prune -f
 
-      - name: Show status
+      - name:  Deployment info
         run: |
-          docker ps
-          echo ""
-          echo "Frontend: http://$(curl -s http://checkip.amazonaws.com):3000"
-          echo "Backend:  http://$(curl -s http://checkip.amazonaws.com):8080"
+          PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
+          echo "================================"
+          echo "🚀 Deploy Completo!"
+          echo "================================"
+          echo "Frontend:  http://$PUBLIC_IP:3000"
+          echo "Backend:   http://$PUBLIC_IP:8080"
+          echo "================================"
