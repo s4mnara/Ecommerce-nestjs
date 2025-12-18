@@ -31,16 +31,16 @@ jobs:
         run: docker save backend:latest -o backend.tar
 
       - name: Create app directory on EC2
-        run: ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
 
       - name: Copy Docker images to EC2
-        run: scp -C frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+        run: scp -C frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/app/
 
       - name: Load and run Docker images on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-            cd /home/ubuntu/app
+            cd ~/app
             docker load -i frontend.tar
             docker stop frontend || true
             docker rm frontend || true
@@ -53,4 +53,5 @@ jobs:
             docker ps -a
             docker images
           EOF
+
 
