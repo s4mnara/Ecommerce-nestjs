@@ -28,7 +28,7 @@ jobs:
           JWT_EXPIRES_IN=7d
           APP_NAME=api-loja
           LOG_LEVEL=info
-          REDIS_HOST=redis
+          REDIS_HOST=loja_redis
           REDIS_PORT=6379
           EOF
           
