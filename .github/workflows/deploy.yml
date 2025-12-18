@@ -1,22 +1,22 @@
 name: Deploy to EC2
 
-on: 
-  push: 
+on:  
+  push:  
     branches: [main]
 
-jobs: 
-  deploy:
+jobs:  
+  deploy: 
     runs-on: self-hosted
     
     steps:
-      - name:  Checkout code
-        uses:  actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Create backend . env
+      - name: Create backend .env
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           
-          cat > api/.env << 'EOF'
+          cat > api/. env << 'EOF'
           PORT=3000
           NODE_ENV=production
           DB_HOST=db
@@ -28,7 +28,7 @@ jobs:
           JWT_EXPIRES_IN=7d
           APP_NAME=api-loja
           LOG_LEVEL=info
-          REDIS_HOST=loja_redis
+          REDIS_HOST=redis
           REDIS_PORT=6379
           EOF
           
@@ -36,7 +36,7 @@ jobs:
           echo "FRONTEND_URL=http://$PUBLIC_IP:3000" >> api/.env
           
           echo "=== Backend .env criado ==="
-          cat api/. env
+          cat api/.env
 
       - name: Create frontend .env
         run: |
@@ -47,7 +47,7 @@ jobs:
           EOF
           
           echo "=== Frontend .env criado ==="
-          cat frontend/.env
+          cat frontend/. env
 
       - name: Stop ALL old containers
         run: |
@@ -67,16 +67,16 @@ jobs:
           sleep 20
 
       - name: Check health
-        run:  |
+        run: |
           echo "=== Status dos Containers ==="
           docker-compose ps
           echo ""
-          echo -n "PostgreSQL:  "
+          echo -n "PostgreSQL: "
           docker exec loja_db pg_isready -U postgres || echo "⚠️ Not ready"
           echo -n "Redis: "
           docker exec loja_redis redis-cli ping || echo "⚠️ Not ready"
 
-      - name:  Show logs
+      - name: Show logs
         run: |
           echo "=== API Logs ==="
           docker-compose logs --tail=20 api
@@ -87,11 +87,11 @@ jobs:
           echo "=== Database Logs ==="
           docker-compose logs --tail=10 db
 
-      - name:  Cleanup old images
-        run:  |
+      - name: Cleanup old images
+        run: |
           docker image prune -f
 
-      - name: Deployment info
+      - name:  Deployment info
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           echo "========================================"
@@ -99,7 +99,7 @@ jobs:
           echo "========================================"
           echo "Frontend:  http://$PUBLIC_IP:3000"
           echo "Backend:   http://$PUBLIC_IP:8080"
-          echo "Database:   $PUBLIC_IP:5432"
-          echo "Redis:     $PUBLIC_IP:6379"
+          echo "Database:  $PUBLIC_IP:5432"
+          echo "Redis:    $PUBLIC_IP:6379"
           echo "========================================"
           docker-compose ps
