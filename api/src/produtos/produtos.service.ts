@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -115,13 +116,23 @@ export class ProdutosService {
   }
 
   // ========================
-  // REMOVER (INVALIDA CACHE)
+  // REMOVER (INVALIDA CACHE) - TRATAMENTO DE FK
   // ========================
   async remove(id: number): Promise<void> {
-    await this.produtoRepository.delete(id);
+    try {
+      await this.produtoRepository.delete(id);
 
-    await this.redis.del('produtos:all');
-    await this.redis.del(`produtos:${id}`);
-    console.log(`Redis DEL: produtos:all, produtos:${id}`);
+      await this.redis.del('produtos:all');
+      await this.redis.del(`produtos:${id}`);
+      console.log(`Redis DEL: produtos:all, produtos:${id}`);
+    } catch (error) {
+      // Código 23503 = FK violation no Postgres
+      if (error.code === '23503') {
+        throw new BadRequestException(
+          'Não é possível remover este produto porque ele ainda está em uso no carrinho de algum usuário.',
+        );
+      }
+      throw error;
+    }
   }
 }

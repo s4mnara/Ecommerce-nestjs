@@ -10,7 +10,7 @@ export class ItemCarrinho {
   @ManyToOne(() => Carrinho, carrinho => carrinho.itens, { onDelete: 'CASCADE' })
   carrinho: Carrinho;
 
-  @ManyToOne(() => Produto, { eager: true, onDelete: 'RESTRICT' })
+  @ManyToOne(() => Produto, { eager: true, onDelete: 'CASCADE' })
   produto: Produto;
 
   @Column()
