@@ -10,61 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout do repositório
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️⃣ Configurar chave SSH
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️⃣ Build Docker image do frontend
       - name: Build Frontend Docker image
-        run: |
-          docker build -t frontend:latest -f frontend/Dockerfile frontend
+        run: docker build -t frontend:latest -f frontend/Dockerfile frontend
 
-      # 4️⃣ Salvar imagem frontend como tar
       - name: Save Frontend Docker image as tar
-        run: |
-          docker save frontend:latest -o frontend.tar
+        run: docker save frontend:latest -o frontend.tar
 
-      # 5️⃣ Build Docker image do backend
       - name: Build Backend Docker image
-        run: |
-          docker build -t backend:latest -f api/Dockerfile api
+        run: docker build -t backend:latest -f api/Dockerfile api
 
-      # 6️⃣ Salvar imagem backend como tar
       - name: Save Backend Docker image as tar
-        run: |
-          docker save backend:latest -o backend.tar
+        run: docker save backend:latest -o backend.tar
 
-      # 7️⃣ Criar diretório na EC2
       - name: Create app directory on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
 
       - name: Copy Docker images to EC2
-        run: |
-          scp -o StrictHostKeyChecking=no frontend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
-          scp -o StrictHostKeyChecking=no backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+        run: scp -o StrictHostKeyChecking=no frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
-      # 9️⃣ Deploy na EC2
       - name: Load and run Docker images on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            cd /home/ubuntu/app &&
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/app
             
-            # Frontend
-            docker load -i frontend.tar &&
-            docker stop frontend || true &&
-            docker rm frontend || true &&
-            docker run -d --name frontend -p 80:80 frontend:latest &&
+            docker load -i frontend.tar
+            docker stop frontend || true
+            docker rm frontend || true
+            docker run -d --name frontend -p 80:80 frontend:latest
 
-            # Backend
-            docker load -i backend.tar &&
-            docker stop backend || true &&
-            docker rm backend || true &&
+            docker load -i backend.tar
+            docker stop backend || true
+            docker rm backend || true
             docker run -d --name backend -p 3000:3000 backend:latest
-          "
+            
+            rm frontend.tar backend.tar
+          EOF
