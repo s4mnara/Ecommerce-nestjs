@@ -1,16 +1,16 @@
 name: Deploy to EC2
 
 on:
-  push: 
+  push:  
     branches: [main]
 
 jobs:
   deploy:
-    runs-on: self-hosted  # ← IMPORTANTE: usa o runner no EC2
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses:  actions/checkout@v4
 
       - name: Stop old containers
         run: |
@@ -25,13 +25,13 @@ jobs:
         run: |
           docker build -t backend:latest -f api/Dockerfile api
 
-      - name: Run frontend
+      - name:  Run frontend (porta 3000)
         run: |
-          docker run -d --name frontend --restart unless-stopped -p 80:80 frontend:latest
+          docker run -d --name frontend --restart unless-stopped -p 3000:3000 frontend:latest
 
-      - name: Run backend
+      - name:  Run backend (porta 8080)
         run: |
-          docker run -d --name backend --restart unless-stopped -p 3000:3000 backend:latest
+          docker run -d --name backend --restart unless-stopped -p 8080:8080 backend:latest
 
       - name:  Cleanup
         run: |
@@ -40,3 +40,6 @@ jobs:
       - name: Show status
         run: |
           docker ps
+          echo ""
+          echo "Frontend: http://$(curl -s http://checkip.amazonaws.com):3000"
+          echo "Backend:  http://$(curl -s http://checkip.amazonaws.com):8080"
