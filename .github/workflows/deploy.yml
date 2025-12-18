@@ -10,9 +10,9 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses:  actions/checkout@v4
+        uses:   actions/checkout@v4
 
-      - name: Create backend .env with secrets
+      - name: Create backend . env
         run: |
           cat > api/.env << 'EOF'
           PORT=3000
@@ -20,9 +20,9 @@ jobs:
           DB_HOST=db
           DB_PORT=5432
           DB_USERNAME=postgres
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PASSWORD=postgres
           DB_DATABASE=loja_db
-          JWT_SECRET=${{ secrets. JWT_SECRET }}
+          JWT_SECRET=seuSegredoAqui
           JWT_EXPIRES_IN=7d
           APP_NAME=api-loja
           LOG_LEVEL=info
@@ -30,16 +30,27 @@ jobs:
           REDIS_PORT=6379
           EOF
 
-      - name: Create frontend .env
+      - name: Create frontend . env
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           cat > frontend/.env << EOF
           REACT_APP_API_URL=http://\$PUBLIC_IP:8080
           EOF
 
-      - name: Stop old containers
+      - name: Stop ALL old containers
         run: |
+          # Parar docker-compose
           docker-compose down || true
+          
+          # Parar TODOS os containers
+          docker stop $(docker ps -aq) 2>/dev/null || true
+          
+          # Remover TODOS os containers
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          
+          # Verificar se as portas estão livres
+          sudo lsof -ti: 3000 | xargs sudo kill -9 2>/dev/null || true
+          sudo lsof -ti:8080 | xargs sudo kill -9 2>/dev/null || true
 
       - name: Build and start services
         run: |
@@ -52,24 +63,38 @@ jobs:
 
       - name: Check health
         run: |
+          echo "=== Status dos Containers ==="
           docker-compose ps
-          docker exec loja_db pg_isready -U postgres || echo "⚠️ Database not ready"
-          docker exec loja_redis redis-cli ping || echo "⚠️ Redis not ready"
+          echo ""
+          echo -n "PostgreSQL: "
+          docker exec loja_db pg_isready -U postgres || echo "⚠️ Not ready"
+          echo -n "Redis: "
+          docker exec loja_redis redis-cli ping || echo "⚠️ Not ready"
 
       - name: Show logs
         run: |
-          docker-compose logs --tail=30
+          echo "=== API Logs ==="
+          docker-compose logs api --tail=20
+          echo ""
+          echo "=== Frontend Logs ==="
+          docker-compose logs frontend --tail=20
+          echo ""
+          echo "=== Database Logs ==="
+          docker-compose logs db --tail=10
 
-      - name: Cleanup
+      - name: Cleanup old images
         run: |
           docker image prune -f
 
-      - name:  Deployment info
+      - name: Deployment info
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
-          echo "================================"
+          echo "========================================"
           echo "🚀 Deploy Completo!"
-          echo "================================"
-          echo "Frontend:  http://$PUBLIC_IP:3000"
+          echo "========================================"
+          echo "Frontend:   http://$PUBLIC_IP:3000"
           echo "Backend:   http://$PUBLIC_IP:8080"
-          echo "================================"
+          echo "Database:  $PUBLIC_IP:5432"
+          echo "Redis:     $PUBLIC_IP:6379"
+          echo "========================================"
+          docker-compose ps
