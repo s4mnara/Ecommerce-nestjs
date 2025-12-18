@@ -2,7 +2,7 @@ name: CI/CD Deploy NestJS Docker (Frontend + Backend)
 
 on:
   push:
-    branches:
+    branches: 
       - main
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name:  Checkout repo
         uses: actions/checkout@v3
 
       - name: Start SSH agent
@@ -21,44 +21,41 @@ jobs:
       - name: Build and Save Frontend
         run: |
           docker build -t frontend:latest -f frontend/Dockerfile frontend
-          docker save frontend:latest -o frontend.tar
+          docker save frontend: latest -o frontend.tar
 
       - name: Build and Save Backend
         run: |
           docker build -t backend:latest -f api/Dockerfile api
           docker save backend:latest -o backend.tar
 
-      - name: Create app directory on EC2
+      - name: Copy files to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/${{ secrets.EC2_USER }}/app"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets. EC2_HOST }} "mkdir -p ~/app"
+          scp -o StrictHostKeyChecking=no frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/app/
 
-      - name: Copy Docker images to EC2
+      - name: Deploy on EC2
         run: |
-          scp -o StrictHostKeyChecking=no frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app/
-
-      - name: Load and run Docker images on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets. EC2_USER }}@${{ secrets.EC2_HOST }} bash << 'EOF'
             set -e
-            cd /home/${{ secrets.EC2_USER }}/app
+            cd ~/app
             
             echo "Limpando containers antigos..."
-            docker stop frontend backend || true
-            docker rm frontend backend || true
+            docker stop frontend backend 2>/dev/null || true
+            docker rm frontend backend 2>/dev/null || true
             
             echo "Carregando imagens..."
             docker load -i frontend.tar
             docker load -i backend.tar
             
             echo "Iniciando novos containers..."
-            docker run -d --name frontend -p 80:80 frontend:latest
-            docker run -d --name backend -p 3000:3000 backend:latest
+            docker run -d --name frontend -p 80:80 --restart unless-stopped frontend:latest
+            docker run -d --name backend -p 3000:3000 --restart unless-stopped backend:latest
             
             echo "Limpando arquivos temporários..."
-            rm -f frontend.tar backend.tar
+            rm -f frontend.tar backend. tar
             
+            echo "Status dos containers:"
             docker ps -a
           EOF
-
 
 
