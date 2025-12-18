@@ -1,12 +1,12 @@
-name: CI/CD Deploy NestJS Docker
+name: CI/CD Deploy NestJS Docker (Optimized)
 
 on:
   push:
     branches:
-      - main   # branch que dispara o deploy
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,18 +20,33 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️⃣ Criar diretório e copiar arquivos para a EC2
-      - name: Copy files to EC2
+      # 3️⃣ Build da imagem Docker
+      - name: Build Docker image
+        run: |
+          docker build -t myapp:latest .
+
+      # 4️⃣ Salvar a imagem em arquivo tar
+      - name: Save Docker image as tar
+        run: |
+          docker save myapp:latest -o myapp.tar
+
+      # 5️⃣ Criar diretório na EC2
+      - name: Create app directory on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
-          scp -o StrictHostKeyChecking=no -r ./* ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
-      # 4️⃣ Build e deploy do Docker na EC2
-      - name: Deploy Docker
+      # 6️⃣ Copiar a imagem tar para a EC2
+      - name: Copy Docker image to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no myapp.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+
+      # 7️⃣ Deploy na EC2
+      - name: Load and run Docker image on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             cd /home/ubuntu/app &&
-            docker-compose down &&
-            docker-compose build &&
-            docker-compose up -d
+            docker load -i myapp.tar &&
+            docker stop myapp || true &&
+            docker rm myapp || true &&
+            docker run -d --name myapp -p 3000:3000 myapp:latest
           "
