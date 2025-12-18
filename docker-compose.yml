@@ -1,8 +1,6 @@
-
-
 services:
   api:
-    build:
+    build:  
       context: ./api
       dockerfile: Dockerfile
     container_name: loja_api
@@ -10,51 +8,49 @@ services:
     ports:
       - "8080:3000"
     env_file:
-      - .env
+      - ./api/.env
     depends_on:
       db:
         condition: service_healthy
-    networks:
+    networks:  
       - loja-network
 
-
-
   frontend:
-    build:
+    build: 
       context: ./frontend
       dockerfile: Dockerfile
     container_name: loja_frontend
     ports:
       - "3000:80"
-    environment:
-      REACT_APP_API_URL: http://api:3000
+    env_file:
+      - ./frontend/.env
     depends_on:
       - api
-    networks:
+    networks: 
       - loja-network
 
   db:
-    image: postgres:16
+    image:   postgres:16
     container_name: loja_db
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_DATABASE}
-    ports:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: loja_db
+    ports:  
       - "5432:5432"
-    volumes:
+    volumes: 
       - pgdata:/var/lib/postgresql/data
     networks:
       - loja-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      test:   ["CMD-SHELL", "pg_isready -U postgres -d loja_db"]
       interval: 5s
       retries: 5
-      timeout: 5s
+      timeout:   5s
       start_period: 10s
 
-  redis:
+  redis:  
     image: redis:7
     container_name: loja_redis
     ports:
@@ -62,14 +58,12 @@ services:
     networks:
       - loja-network
 
-
 networks:
-  loja-network:
-    driver: bridge
+  loja-network: 
+    driver:   bridge
 
 volumes:
   pgdata:
-
 
 
 
