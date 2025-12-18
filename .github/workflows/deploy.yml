@@ -45,7 +45,6 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
 
-      # 8️⃣ Copiar as imagens tar para a EC2
       - name: Copy Docker images to EC2
         run: |
           scp -o StrictHostKeyChecking=no frontend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
