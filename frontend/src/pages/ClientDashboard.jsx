@@ -209,7 +209,7 @@ function ClientDashboard({ onLogout }) {
   // ======== COMPONENTES INTERNOS ========
   const ProdutoCard = ({ p }) => (
     <div key={p.id} className="produto-card">
-      {p.imagem && <img src={`http://localhost:8080/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
+      {p.imagem && <img src={`http://${process.env.REACT_APP_API_URL}/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
       <h3>{p.nome}</h3>
       <p className="produto-descricao">{p.descricao}</p>
       <p className="produto-preco">R$ {parseFloat(p.preco).toFixed(2)}</p>

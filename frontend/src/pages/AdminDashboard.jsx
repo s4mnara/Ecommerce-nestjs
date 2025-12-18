@@ -4,7 +4,8 @@ import "../index.css";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const BASE_IMAGE_URL = 'http://localhost:8080/uploads/';
+// ✅ CORRETO (usa variável de ambiente)
+const BASE_IMAGE_URL = `${process.env.REACT_APP_API_URL}/uploads/`;
 
 const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
   <div className="produto-form-panel" style={{ marginTop: '20px' }}>
