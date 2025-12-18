@@ -1,5 +1,93 @@
-0s
-Run echo "=== API Logs ==="
-=== API Logs ===
-No such service: --tail=20
-Error: Process completed with exit code 1.
+name: Deploy to EC2
+
+on:
+  push: 
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses:  actions/checkout@v4
+
+      - name: Create backend . env
+        run: |
+          cat > api/.env << 'EOF'
+          PORT=3000
+          NODE_ENV=production
+          DB_HOST=db
+          DB_PORT=5432
+          DB_USERNAME=postgres
+          DB_PASSWORD=postgres
+          DB_DATABASE=loja_db
+          JWT_SECRET=seuSegredoAqui
+          JWT_EXPIRES_IN=7d
+          APP_NAME=api-loja
+          LOG_LEVEL=info
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          EOF
+
+      - name: Create frontend .env
+        run: |
+          PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
+          cat > frontend/.env << EOF
+          REACT_APP_API_URL=http://\$PUBLIC_IP:8080
+          EOF
+
+      - name: Stop ALL old containers
+        run: |
+          docker-compose down || true
+          docker stop $(docker ps -aq) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          sudo lsof -ti: 3000 | xargs sudo kill -9 2>/dev/null || true
+          sudo lsof -ti:8080 | xargs sudo kill -9 2>/dev/null || true
+
+      - name: Build and start services
+        run: |
+          docker-compose up -d --build
+
+      - name: Wait for services
+        run: |
+          echo "Aguardando serviços iniciarem..."
+          sleep 20
+
+      - name: Check health
+        run:  |
+          echo "=== Status dos Containers ==="
+          docker-compose ps
+          echo ""
+          echo -n "PostgreSQL:  "
+          docker exec loja_db pg_isready -U postgres || echo "⚠️ Not ready"
+          echo -n "Redis: "
+          docker exec loja_redis redis-cli ping || echo "⚠️ Not ready"
+
+      - name:  Show logs
+        run: |
+          echo "=== API Logs ==="
+          docker-compose logs --tail=20 api
+          echo ""
+          echo "=== Frontend Logs ==="
+          docker-compose logs --tail=20 frontend
+          echo ""
+          echo "=== Database Logs ==="
+          docker-compose logs --tail=10 db
+
+      - name: Cleanup old images
+        run: |
+          docker image prune -f
+
+      - name: Deployment info
+        run: |
+          PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
+          echo "========================================"
+          echo "🚀 Deploy Completo!"
+          echo "========================================"
+          echo "Frontend:  http://$PUBLIC_IP:3000"
+          echo "Backend:    http://$PUBLIC_IP:8080"
+          echo "Database:  $PUBLIC_IP:5432"
+          echo "Redis:      $PUBLIC_IP:6379"
+          echo "========================================"
+          docker-compose ps
