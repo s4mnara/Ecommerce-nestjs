@@ -18,40 +18,46 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      - name: Build Frontend Docker image
-        run: docker build -t frontend:latest -f frontend/Dockerfile frontend
+      - name: Build and Save Frontend
+        run: |
+          docker build -t frontend:latest -f frontend/Dockerfile frontend
+          docker save frontend:latest -o frontend.tar
 
-      - name: Save Frontend Docker image as tar
-        run: docker save frontend:latest -o frontend.tar
-
-      - name: Build Backend Docker image
-        run: docker build -t backend:latest -f api/Dockerfile api
-
-      - name: Save Backend Docker image as tar
-        run: docker save backend:latest -o backend.tar
+      - name: Build and Save Backend
+        run: |
+          docker build -t backend:latest -f api/Dockerfile api
+          docker save backend:latest -o backend.tar
 
       - name: Create app directory on EC2
-        run: ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/${{ secrets.EC2_USER }}/app"
 
       - name: Copy Docker images to EC2
-        run: scp -C frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/app/
+        run: |
+          scp -o StrictHostKeyChecking=no frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app/
 
       - name: Load and run Docker images on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-            cd ~/app
+            cd /home/${{ secrets.EC2_USER }}/app
+            
+            echo "Limpando containers antigos..."
+            docker stop frontend backend || true
+            docker rm frontend backend || true
+            
+            echo "Carregando imagens..."
             docker load -i frontend.tar
-            docker stop frontend || true
-            docker rm frontend || true
-            docker run -d --name frontend -p 80:80 frontend:latest
             docker load -i backend.tar
-            docker stop backend || true
-            docker rm backend || true
+            
+            echo "Iniciando novos containers..."
+            docker run -d --name frontend -p 80:80 frontend:latest
             docker run -d --name backend -p 3000:3000 backend:latest
+            
+            echo "Limpando arquivos temporários..."
             rm -f frontend.tar backend.tar
+            
             docker ps -a
-            docker images
           EOF
 
 
