@@ -9,11 +9,12 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Habilita CORS para o frontend React
-  app.enableCors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
-  });
+app.enableCors({
+  origin: true,  // Aceita qualquer origem
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
 
 
   app.use(express.json());
@@ -28,7 +29,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 API rodando na porta ${port}`);
-  console.log(`📂 Servindo imagens em: http://localhost:${port}/uploads/`);
+  console.log(`📂 Servindo imagens em: http://${process.env.REACT_APP_API_URL}:${port}/uploads/`);
 }
 
 bootstrap();
