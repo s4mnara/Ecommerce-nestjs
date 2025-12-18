@@ -34,22 +34,23 @@ jobs:
         run: ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
 
       - name: Copy Docker images to EC2
-        run: scp -o StrictHostKeyChecking=no frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+        run: scp -C frontend.tar backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
       - name: Load and run Docker images on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
             cd /home/ubuntu/app
-            
             docker load -i frontend.tar
             docker stop frontend || true
             docker rm frontend || true
             docker run -d --name frontend -p 80:80 frontend:latest
-
             docker load -i backend.tar
             docker stop backend || true
             docker rm backend || true
             docker run -d --name backend -p 3000:3000 backend:latest
-            
-            rm frontend.tar backend.tar
+            rm -f frontend.tar backend.tar
+            docker ps -a
+            docker images
           EOF
+
