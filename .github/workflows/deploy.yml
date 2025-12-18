@@ -1,4 +1,4 @@
-name: CI/CD Deploy NestJS Docker (Optimized)
+name: CI/CD Deploy NestJS Docker (Frontend + Backend)
 
 on:
   push:
@@ -10,43 +10,62 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Pegar o código do repositório
+      # 1️⃣ Checkout do repositório
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️⃣ Configurar a chave SSH
+      # 2️⃣ Configurar chave SSH
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️⃣ Build da imagem Docker
-      - name: Build Docker image
+      # 3️⃣ Build Docker image do frontend
+      - name: Build Frontend Docker image
         run: |
-          docker build -t myapp:latest .
+          docker build -t frontend:latest -f frontend/Dockerfile frontend
 
-      # 4️⃣ Salvar a imagem em arquivo tar
-      - name: Save Docker image as tar
+      # 4️⃣ Salvar imagem frontend como tar
+      - name: Save Frontend Docker image as tar
         run: |
-          docker save myapp:latest -o myapp.tar
+          docker save frontend:latest -o frontend.tar
 
-      # 5️⃣ Criar diretório na EC2
+      # 5️⃣ Build Docker image do backend
+      - name: Build Backend Docker image
+        run: |
+          docker build -t backend:latest -f api/Dockerfile api
+
+      # 6️⃣ Salvar imagem backend como tar
+      - name: Save Backend Docker image as tar
+        run: |
+          docker save backend:latest -o backend.tar
+
+      # 7️⃣ Criar diretório na EC2
       - name: Create app directory on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
 
-      # 6️⃣ Copiar a imagem tar para a EC2
-      - name: Copy Docker image to EC2
+      # 8️⃣ Copiar as imagens tar para a EC2
+      - name: Copy Docker images to EC2
         run: |
-          scp -o StrictHostKeyChecking=no myapp.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+          scp -o StrictHostKeyChecking=no frontend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+          scp -o StrictHostKeyChecking=no backend.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
-      # 7️⃣ Deploy na EC2
-      - name: Load and run Docker image on EC2
+      # 9️⃣ Deploy na EC2
+      - name: Load and run Docker images on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             cd /home/ubuntu/app &&
-            docker load -i myapp.tar &&
-            docker stop myapp || true &&
-            docker rm myapp || true &&
-            docker run -d --name myapp -p 3000:3000 myapp:latest
+            
+            # Frontend
+            docker load -i frontend.tar &&
+            docker stop frontend || true &&
+            docker rm frontend || true &&
+            docker run -d --name frontend -p 80:80 frontend:latest &&
+
+            # Backend
+            docker load -i backend.tar &&
+            docker stop backend || true &&
+            docker rm backend || true &&
+            docker run -d --name backend -p 3000:3000 backend:latest
           "
