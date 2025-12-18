@@ -1,17 +1,17 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://${process.env.REACT_APP_API_URL}:8080';
+const API_URL = process.env.REACT_APP_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
 });
 
 //  Não definimos Content-Type fixo — axios faz isso automaticamente
-api.interceptors.request.use(
+api. interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers. Authorization = `Bearer ${token}`;
     }
     return config;
   },
