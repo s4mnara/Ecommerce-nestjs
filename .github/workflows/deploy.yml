@@ -1,0 +1,37 @@
+name: CI/CD Deploy NestJS Docker
+
+on:
+  push:
+    branches:
+      - main   # ou o branch que você quer deployar
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️ Pega o código do repositório
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2️ Configura a chave SSH
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.EC2_KEY }}
+
+      # 3️ Copia os arquivos para a EC2
+      - name: Copy files to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
+          scp -o StrictHostKeyChecking=no -r ./* ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/app/
+
+      # 4️ Builda e roda o Docker na EC2
+      - name: Deploy Docker
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            cd ~/app &&
+            docker-compose down &&
+            docker-compose build &&
+            docker-compose up -d
+          "
