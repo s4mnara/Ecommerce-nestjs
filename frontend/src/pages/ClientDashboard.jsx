@@ -148,38 +148,58 @@ function ClientDashboard({ onLogout }) {
     }
   };
 
+  // const finalizarPedido = async () => {
+  //   if (!userId) return;
+  //   if (carrinho.length === 0) return toast.warn("Carrinho vazio.");
+
+  //   try {
+  //     const res = await apiAuth.post(`/pagamentos/iniciar/${userId}`);
+  //     const { url, success } = res.data;
+  //     if (success) window.location.href = url;
+  //     else {
+  //       toast.error("Erro no pagamento. Pedido criado como pendente.");
+  //       carregarPedidos();
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error("Erro ao iniciar pagamento.");
+  //     carregarPedidos();
+  //   }
+  //   setShowCart(false);
+  // };
+
+  // const tentarFinalizarPedido = async (pedidoId) => {
+  //   if (!userId) return;
+  //   try {
+  //     const res = await apiAuth.post(`/pagamentos/reprocessar/${pedidoId}`);
+  //     const { url, success } = res.data;
+  //     if (success) window.location.href = url;
+  //     else toast.error("Erro ao processar pagamento.");
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error("Erro ao tentar finalizar pedido.");
+  //   }
+  // };
+
   const finalizarPedido = async () => {
-    if (!userId) return;
-    if (carrinho.length === 0) return toast.warn("Carrinho vazio.");
+    if (carrinho.length === 0) {
+      return toast.warn("Carrinho vazio.");
+    }
 
     try {
-      const res = await apiAuth.post(`/pagamentos/iniciar/${userId}`);
-      const { url, success } = res.data;
-      if (success) window.location.href = url;
-      else {
-        toast.error("Erro no pagamento. Pedido criado como pendente.");
-        carregarPedidos();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao iniciar pagamento.");
+      const res = await apiAuth.post("/pedidos/finalizar");
+
+      toast.success("Pedido finalizado com sucesso!");
+      carregarCarrinho();
       carregarPedidos();
+      setShowCart(false);
+
+    } catch (err) {
+      const msg = err.response?.data?.message || "Erro ao finalizar pedido.";
+      toast.error(msg);
     }
-    setShowCart(false);
   };
 
-  const tentarFinalizarPedido = async (pedidoId) => {
-    if (!userId) return;
-    try {
-      const res = await apiAuth.post(`/pagamentos/reprocessar/${pedidoId}`);
-      const { url, success } = res.data;
-      if (success) window.location.href = url;
-      else toast.error("Erro ao processar pagamento.");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao tentar finalizar pedido.");
-    }
-  };
 
   // ======== UI Dinâmica ========
   const handleShowCart = () => {
@@ -266,7 +286,8 @@ function ClientDashboard({ onLogout }) {
                 <p>Total: R$ {parseFloat(pedido.total || 0).toFixed(2)}</p>
                 <p>Status: <span style={{ color: status === 'pendente' ? 'orange' : 'green', fontWeight: 'bold' }}>{status.toUpperCase()}</span></p>
                 <p>Itens: {pedido.itens?.length || '0'}</p>
-                {status === 'pendente' && <button onClick={() => tentarFinalizarPedido(pedido.id)} className="button submit-button full-width-button">Finalizar Pedido</button>}
+                {status === 'pendente' && (<button disabled className="button submit-button full-width-button" style={{ opacity: 0.6, cursor: 'not-allowed' }}>  Pagamento indisponível</button>)}
+
               </div>
             );
           })
