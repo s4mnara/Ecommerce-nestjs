@@ -50,7 +50,7 @@ Plataforma completa de **e‑commerce para suplementos**, construída com **arqu
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 Como Executar o Projeto Localmente
 
 ### ✔️ Pré‑requisitos
 
@@ -111,6 +111,149 @@ Caso o container `loja_api` falhe, aumente a memória do Docker Desktop:
 
 ---
 
+Esta é uma excelente documentação técnica do ambiente de produção. Para torná-la ainda mais profissional e facilitar a manutenção futura, organizei os dados que você forneceu em um formato Markdown limpo, estruturado e visualmente escaneável.
+
+---
+
+# 🌐 Documentação de Produção (AWS EC2)
+
+Esta seção detalha a infraestrutura de deploy da aplicação **Ecommerce-NestJS**, hospedada na AWS, utilizando Docker e CI/CD via GitHub Actions.
+
+## 📋 Especificações do Servidor
+
+| Item | Detalhes |
+| --- | --- |
+| **Provedor** | Amazon Web Services (AWS) |
+| **Tipo de Instância** | EC2 Instance |
+| **Sistema Operacional** | Ubuntu Server 24.04 LTS (Noble Numbat) |
+| **AMI ID** | `ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20251022` |
+| **IP Público** | `52.200.194.166` |
+
+---
+
+## 🔗 Acesso à Aplicação
+
+Os serviços estão distribuídos conforme as URLs e portas abaixo:
+
+| Serviço | Endpoint | Porta | Acesso |
+| --- | --- | --- | --- |
+| **Frontend** | [http://52.200.194.166:3000](http://52.200.194.166:3000) | `3000` | Público |
+| **API Backend** | [http://52.200.194.166:8080](http://52.200.194.166:8080) | `8080` | Público |
+| **PostgreSQL** | `52.200.194.166` | `5432` | Interno (Docker Network) |
+| **Redis** | `52.200.194.166` | `6379` | Interno (Docker Network) |
+
+---
+
+## 🐳 Arquitetura de Containers (Docker)
+
+Abaixo, a relação dos containers gerenciados via `docker-compose`:
+
+```bash
+CONTAINER ID   IMAGE                       PORTS                     NAMES
+aae52af5f59b   ecommerce-nestjs_frontend   0.0.0.0:3000->80/tcp      loja_frontend
+a7b26b0fb771   ecommerce-nestjs_api        0.0.0.0:8080->3000/tcp    loja_api
+c251a2c34d2a   redis:7                     0.0.0.0:6379->6379/tcp    loja_redis
+f865b78399ab   postgres:16                 0.0.0.0:5432->5432/tcp    loja_db
+
+```
+
+---
+
+## 🔒 Configuração de Firewall (Security Group)
+
+Regras de entrada configuradas no console da AWS para garantir a segurança e funcionalidade:
+
+| Tipo | Protocolo | Porta | Origem | Descrição |
+| --- | --- | --- | --- | --- |
+| **SSH** | TCP | `22` | `Seu IP` | Acesso administrativo |
+| **HTTP** | TCP | `80` | `0.0.0.0/0` | Acesso web padrão |
+| **HTTPS** | TCP | `443` | `0.0.0.0/0` | Tráfego seguro |
+| **Custom TCP** | TCP | `3000` | `0.0.0.0/0` | Frontend React |
+| **Custom TCP** | TCP | `8080` | `0.0.0.0/0` | API Backend NestJS |
+
+---
+
+## 🚀 Comandos de Operação (Cheat Sheet)
+
+### 1. Conectar ao Servidor
+
+```bash
+ssh -i "sua-chave.pem" ubuntu@52.200.194.166
+cd ~/Ecommerce-nestjs
+
+```
+
+### 2. Gerenciamento da Aplicação
+
+* **Verificar logs em tempo real:** `docker-compose logs -f`
+* **Status dos containers:** `docker ps`
+* **Estatísticas de consumo (CPU/RAM):** `docker stats`
+
+### 3. Deploy Manual (Hotfix)
+
+```bash
+git pull origin main
+docker-compose up --build -d
+
+```
+
+### 🔄 GitHub Actions Runner
+
+O servidor utiliza um **Self-hosted Runner** para deploys automáticos. Caso precise reiniciá-lo manualmente:
+
+```bash
+cd ~/actions-runner
+./run.sh
+
+```
+
+---
+
+## ⚙️ CI/CD Full‑Stack
+
+Este projeto possui **pipeline de CI/CD** configurado com **GitHub Actions**, garantindo que **backend e frontend** sejam testados e buildados automaticamente a cada **push** ou **pull request** nas branches `main` ou `develop`.
+
+### 🔹 Funcionalidades do CI/CD
+
+1. **Backend NestJS (`loja_api`)**
+   - Instala dependências
+   - Roda testes unitários (`npm test`)
+   - Builda a aplicação (`npm run build`)
+   - Gera a imagem Docker (`loja_api`)
+
+2. **Frontend React (`frontend`)**
+   - Instala dependências
+   - Roda testes (`npm test`)
+   - Builda o projeto (`npm run build`)
+   - Gera a imagem Docker (`loja_frontend`)
+
+3. **Serviços de suporte**
+   - PostgreSQL para testes do backend
+   - Redis para cache e testes de performance
+
+### 🔹 Como visualizar o CI/CD
+
+O workflow está definido em:
+
+```
+
+.github/workflows/ci.yml
+
+```
+
+Exemplo de execução no GitHub Actions:
+
+![CI/CD](https://github.com/s4mnara/Ecommerce-nestjs/actions/workflows/ci.yml/badge.svg)
+
+> Cada push ou pull request dispara automaticamente a pipeline, garantindo que **qualquer alteração no backend ou frontend seja validada antes de ir para produção**.
+
+
+
+
+
+
+---
+
 ## 📦 Funcionalidades
 
 ### 🔐 Autenticação
@@ -160,7 +303,7 @@ docker exec -it loja_redis redis-cli
 keys *
 ```
 
----
+
 
 ## 🎨 Identidade Visual
 
@@ -208,49 +351,9 @@ flowchart LR
 
 ```
 
----
-
-## ⚙️ CI/CD Full‑Stack
-
-Este projeto possui **pipeline de CI/CD** configurado com **GitHub Actions**, garantindo que **backend e frontend** sejam testados e buildados automaticamente a cada **push** ou **pull request** nas branches `main` ou `develop`.
-
-### 🔹 Funcionalidades do CI/CD
-
-1. **Backend NestJS (`loja_api`)**
-   - Instala dependências
-   - Roda testes unitários (`npm test`)
-   - Builda a aplicação (`npm run build`)
-   - Gera a imagem Docker (`loja_api`)
-
-2. **Frontend React (`frontend`)**
-   - Instala dependências
-   - Roda testes (`npm test`)
-   - Builda o projeto (`npm run build`)
-   - Gera a imagem Docker (`loja_frontend`)
-
-3. **Serviços de suporte**
-   - PostgreSQL para testes do backend
-   - Redis para cache e testes de performance
-
-### 🔹 Como visualizar o CI/CD
-
-O workflow está definido em:
-
-```
-
-.github/workflows/ci.yml
-
-```
-
-Exemplo de execução no GitHub Actions:
-
-![CI/CD](https://github.com/s4mnara/Ecommerce-nestjs/actions/workflows/ci.yml/badge.svg)
-
-> Cada push ou pull request dispara automaticamente a pipeline, garantindo que **qualquer alteração no backend ou frontend seja validada antes de ir para produção**.
 
 
 
----
 
 
 
