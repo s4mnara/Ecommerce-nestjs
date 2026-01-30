@@ -1,4 +1,4 @@
-// src/pages/ClientDashboard.jsx
+// src/pages/ClientDashboard. jsx
 import React, { useEffect, useState } from "react";
 import apiAuth from "../api"; // Axios com token já configurado
 import { toast, ToastContainer } from "react-toastify";
@@ -10,7 +10,7 @@ const getClientName = () => {
   const storedUser = localStorage.getItem("usuario");
   if (storedUser) {
     try {
-      const user = JSON.parse(storedUser);
+      const user = JSON. parse(storedUser);
       return user.nome ? user.nome.split(" ")[0] : "Cliente";
     } catch {
       return "Cliente";
@@ -73,7 +73,7 @@ function ClientDashboard({ onLogout }) {
     setLoadingHistory(true);
     try {
       const res = await apiAuth.get(`/pedidos/usuario/${userId}`);
-      setHistory(Array.isArray(res.data) ? res.data : []);
+      setHistory(Array.isArray(res. data) ? res.data : []);
     } catch (err) {
       console.error("Erro ao carregar histórico:", err);
       toast.error("Erro ao carregar histórico de pedidos.");
@@ -148,64 +148,68 @@ function ClientDashboard({ onLogout }) {
     }
   };
 
-  // const finalizarPedido = async () => {
-  //   if (!userId) return;
-  //   if (carrinho.length === 0) return toast.warn("Carrinho vazio.");
-
-  //   try {
-  //     const res = await apiAuth.post(`/pagamentos/iniciar/${userId}`);
-  //     const { url, success } = res.data;
-  //     if (success) window.location.href = url;
-  //     else {
-  //       toast.error("Erro no pagamento. Pedido criado como pendente.");
-  //       carregarPedidos();
-  //     }
-  //   } catch (err) {
-  //     console.error(err);
-  //     toast.error("Erro ao iniciar pagamento.");
-  //     carregarPedidos();
-  //   }
-  //   setShowCart(false);
-  // };
-
-  // const tentarFinalizarPedido = async (pedidoId) => {
-  //   if (!userId) return;
-  //   try {
-  //     const res = await apiAuth.post(`/pagamentos/reprocessar/${pedidoId}`);
-  //     const { url, success } = res.data;
-  //     if (success) window.location.href = url;
-  //     else toast.error("Erro ao processar pagamento.");
-  //   } catch (err) {
-  //     console.error(err);
-  //     toast.error("Erro ao tentar finalizar pedido.");
-  //   }
-  // };
-
+  // ======== FINALIZAR PEDIDO - DUPLA ESTRATÉGIA ========
   const finalizarPedido = async () => {
-    if (carrinho.length === 0) {
-      return toast.warn("Carrinho vazio.");
-    }
+    if (!userId) return;
+    if (carrinho.length === 0) return toast.warn("Carrinho vazio.");
 
     try {
-      const res = await apiAuth.post("/pedidos/finalizar");
+      // Tenta primeiro com gateway de pagamento
+      const res = await apiAuth.post(`/pagamentos/iniciar/${userId}`);
+      const { url, success } = res. data;
+      
+      if (success && url) {
+        // Redireciona para gateway de pagamento
+        window.location.href = url;
+      } else {
+        // Fallback:  cria pedido direto sem pagamento
+        toast.warning("Gateway de pagamento indisponível. Criando pedido.. .");
+        await finalizarPedidoSemPagamento();
+      }
+    } catch (err) {
+      console.error("Erro ao iniciar pagamento:", err);
+      // Fallback:  tenta criar pedido direto
+      toast.warning("Erro no pagamento. Tentando criar pedido.. .");
+      await finalizarPedidoSemPagamento();
+    }
+  };
 
+  // Estratégia alternativa: finalizar sem gateway
+  const finalizarPedidoSemPagamento = async () => {
+    try {
+      const res = await apiAuth.post("/pedidos/finalizar");
       toast.success("Pedido finalizado com sucesso!");
       carregarCarrinho();
       carregarPedidos();
       setShowCart(false);
-
     } catch (err) {
       const msg = err.response?.data?.message || "Erro ao finalizar pedido.";
       toast.error(msg);
     }
   };
 
+  const tentarFinalizarPedido = async (pedidoId) => {
+    if (!userId) return;
+    try {
+      const res = await apiAuth.post(`/pagamentos/reprocessar/${pedidoId}`);
+      const { url, success } = res. data;
+      
+      if (success && url) {
+        window.location.href = url;
+      } else {
+        toast. error("Erro ao processar pagamento.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao tentar finalizar pedido.  Gateway indisponível.");
+    }
+  };
 
   // ======== UI Dinâmica ========
   const handleShowCart = () => {
     setShowHistory(false);
     setShowCart((prev) => !prev);
-    if (!showCart) carregarCarrinho();
+    if (! showCart) carregarCarrinho();
   };
 
   const handleShowHistory = () => {
@@ -216,7 +220,7 @@ function ClientDashboard({ onLogout }) {
 
   const produtosFiltrados = produtos.filter(
     (p) =>
-      p.nome?.toLowerCase().includes(search.toLowerCase()) ||
+      p.nome?. toLowerCase().includes(search.toLowerCase()) ||
       p.descricao?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -224,12 +228,12 @@ function ClientDashboard({ onLogout }) {
     .reduce((acc, item) => item.preco && item.quantidade ? acc + item.preco * item.quantidade : acc, 0)
     .toFixed(2);
 
-  const countCarrinho = carrinho.reduce((acc, item) => item.quantidade ? acc + item.quantidade : acc, 0);
+  const countCarrinho = carrinho. reduce((acc, item) => item.quantidade ?  acc + item.quantidade : acc, 0);
 
   // ======== COMPONENTES INTERNOS ========
   const ProdutoCard = ({ p }) => (
     <div key={p.id} className="produto-card">
-      {p.imagem && <img src={`http://${process.env.REACT_APP_API_URL}/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
+      {p.imagem && <img src={`${process.env.REACT_APP_API_URL || 'http://52.200.194.166: 8080'}/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
       <h3>{p.nome}</h3>
       <p className="produto-descricao">{p.descricao}</p>
       <p className="produto-preco">R$ {parseFloat(p.preco).toFixed(2)}</p>
@@ -252,7 +256,7 @@ function ClientDashboard({ onLogout }) {
                   <span style={{ fontWeight: 'bold', display: 'block', lineHeight: '1.2', marginBottom: '4px' }}>{item.nome}</span>
                   <span style={{ display: 'block', fontSize: '0.9em', color: 'var(--color-secondary)' }}>R$ {(item.preco * item.quantidade).toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap:  '5px' }}>
                   <button onClick={() => handleUpdateQuantity(item.id, -1)} className="button icon-button">-</button>
                   <span style={{ fontWeight: 'bold' }}>{item.quantidade}</span>
                   <button onClick={() => handleUpdateQuantity(item.id, 1)} className="button icon-button">+</button>
@@ -276,7 +280,7 @@ function ClientDashboard({ onLogout }) {
       <h3>📜 Histórico de Pedidos ({history.length}) {loadingHistory && "(Carregando...)"}</h3>
       <button onClick={() => setShowHistory(false)} className="button close-cart-button small-button">Fechar</button>
       <div className="clientes-list">
-        {history.length === 0 ? <p>Você não possui pedidos.</p> :
+        {history.length === 0 ? <p>Você não possui pedidos. </p> : 
           history.map((pedido, index) => {
             const status = pedido.status || 'pendente';
             return (
@@ -284,10 +288,16 @@ function ClientDashboard({ onLogout }) {
                 <p><strong>Pedido #{pedido.id}</strong></p>
                 <p>Data: {pedido.data || new Date().toLocaleDateString()}</p>
                 <p>Total: R$ {parseFloat(pedido.total || 0).toFixed(2)}</p>
-                <p>Status: <span style={{ color: status === 'pendente' ? 'orange' : 'green', fontWeight: 'bold' }}>{status.toUpperCase()}</span></p>
-                <p>Itens: {pedido.itens?.length || '0'}</p>
-                {status === 'pendente' && (<button disabled className="button submit-button full-width-button" style={{ opacity: 0.6, cursor: 'not-allowed' }}>  Pagamento indisponível</button>)}
-
+                <p>Status: <span style={{ color: status === 'pendente' ? 'orange' : 'green', fontWeight: 'bold' }}>{status. toUpperCase()}</span></p>
+                <p>Itens: {pedido.itens?. length || '0'}</p>
+                {status === 'pendente' && (
+                  <button 
+                    onClick={() => tentarFinalizarPedido(pedido.id)} 
+                    className="button submit-button full-width-button"
+                  >
+                    Tentar Pagar Novamente
+                  </button>
+                )}
               </div>
             );
           })
@@ -311,7 +321,7 @@ function ClientDashboard({ onLogout }) {
         <input type="text" placeholder="Pesquisar produtos..." value={search} onChange={e => setSearch(e.target.value)} />
         <button onClick={handleShowHistory} className="button pedidos-button">Pedidos</button>
         <button onClick={handleShowCart} className="button icon-button header-cart-button">
-          <img src="/assets/carrinho.png" alt="Carrinho" className="icon-img" />
+          <img src="/assets/carrinho. png" alt="Carrinho" className="icon-img" />
           <span className="cart-count">({countCarrinho})</span>
         </button>
         <button onClick={onLogout} className="button icon-button logout-desktop">
@@ -321,11 +331,11 @@ function ClientDashboard({ onLogout }) {
       </header>
 
       <div className="dashboard-body-container-client">
-        <div className={`produtos-section-wrapper ${activePanel ? 'space-for-panel' : ''}`}>
+        <div className={`produtos-section-wrapper ${activePanel ?  'space-for-panel' : ''}`}>
           <div className="produtos-section">
             <h3>Produtos Disponíveis {loadingProdutos && "(Carregando...)"}</h3>
             <div className="produtos-carousel client-carousel">
-              {produtosFiltrados.map(p => <ProdutoCard key={p.id} p={p} />)}
+              {produtosFiltrados.map(p => <ProdutoCard key={p. id} p={p} />)}
               {produtosFiltrados.length === 0 && <p className="no-products-message">Nenhum produto encontrado.</p>}
             </div>
           </div>
