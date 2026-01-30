@@ -2,39 +2,34 @@ name: Deploy to EC2
 
 on:   
   push:  
-    branches:  [main]
+    branches: [main]
 
 jobs:   
   deploy: 
     runs-on: self-hosted
     
     steps:
-      - name:  Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set project name
-        run: echo "COMPOSE_PROJECT_NAME=ecommerce-nestjs" >> $GITHUB_ENV
 
       - name: Create backend .env
         run: |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           
-          cat > api/.env << EOF
-          PORT=3000
-          NODE_ENV=production
-          DB_HOST=loja_db
-          DB_PORT=5432
-          DB_USERNAME=postgres
-          DB_PASSWORD=postgres
-          DB_DATABASE=loja_db
-          JWT_SECRET=seuSegredoAqui
-          JWT_EXPIRES_IN=7d
-          APP_NAME=api-loja
-          LOG_LEVEL=info
-          REDIS_HOST=loja_redis
-          REDIS_PORT=6379
-          FRONTEND_URL=http://$PUBLIC_IP:3000
-          EOF
+          printf "PORT=3000\n\
+          NODE_ENV=production\n\
+          DB_HOST=db\n\
+          DB_PORT=5432\n\
+          DB_USERNAME=postgres\n\
+          DB_PASSWORD=postgres\n\
+          DB_DATABASE=loja_db\n\
+          JWT_SECRET=seuSegredoAqui\n\
+          JWT_EXPIRES_IN=7d\n\
+          APP_NAME=api-loja\n\
+          LOG_LEVEL=info\n\
+          REDIS_HOST=loja_redis\n\
+          REDIS_PORT=6379\n\
+          FRONTEND_URL=http://$PUBLIC_IP:3000\n" > api/.env
           
           echo "=== Backend .env criado ==="
           cat api/.env
@@ -47,64 +42,57 @@ jobs:
           echo "=== Frontend .env criado ==="
           cat frontend/.env
 
-      - name: Stop old containers
+      - name: Stop ALL old containers
         run: |
-          docker-compose -p ecommerce-nestjs down || true
-          docker ps -a --filter "name=loja_" -q | xargs docker stop 2>/dev/null || true
-          docker ps -a --filter "name=loja_" -q | xargs docker rm 2>/dev/null || true
-
-      - name: Clean ports
-        run: |
+          docker-compose down || true
+          docker stop $(docker ps -aq) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
           sudo lsof -ti:3000 | xargs sudo kill -9 2>/dev/null || true
           sudo lsof -ti:8080 | xargs sudo kill -9 2>/dev/null || true
-          sleep 5
 
       - name: Build and start services
         run: |
-          docker-compose -p ecommerce-nestjs up -d --build --force-recreate
+          docker-compose up -d --build
 
       - name: Wait for services
-        run:  |
+        run: |
           echo "Aguardando serviços iniciarem..."
-          sleep 30
+          sleep 20
 
       - name: Check health
         run: |
           echo "=== Status dos Containers ==="
-          docker ps --filter "name=loja_"
+          docker-compose ps
           echo ""
           echo -n "PostgreSQL: "
-          docker exec loja_db pg_isready -U postgres && echo "✅ Ready" || echo "⚠️ Not ready"
+          docker exec loja_db pg_isready -U postgres || echo "⚠️ Not ready"
           echo -n "Redis: "
-          docker exec loja_redis redis-cli ping && echo "✅ Ready" || echo "⚠️ Not ready"
-          echo -n "API: "
-          curl -s http://localhost:8080 && echo "✅ Ready" || echo "⚠️ Not ready"
-          echo -n "Frontend: "
-          curl -s http://localhost:3000 && echo "✅ Ready" || echo "⚠️ Not ready"
+          docker exec loja_redis redis-cli ping || echo "⚠️ Not ready"
 
       - name: Show logs
-        if: always()
-        run: |
+        run:  |
           echo "=== API Logs ==="
-          docker logs loja_api --tail=30
+          docker-compose logs --tail=20 api
           echo ""
           echo "=== Frontend Logs ==="
-          docker logs loja_frontend --tail=20
+          docker-compose logs --tail=20 frontend
           echo ""
           echo "=== Database Logs ==="
-          docker logs loja_db --tail=10
+          docker-compose logs --tail=10 db
 
-      - name:  Cleanup old images
-        run:  |
-          docker image prune -af --filter "until=24h"
+      - name: Cleanup old images
+        run: |
+          docker image prune -f
 
       - name: Deployment info
-        run: |
+        run:  |
           PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
           echo "========================================"
           echo "🚀 Deploy Completo!"
           echo "========================================"
-          echo "Frontend:  http://$PUBLIC_IP:3000"
-          echo "Backend:   http://$PUBLIC_IP:8080"
+          echo "Frontend: http://$PUBLIC_IP:3000"
+          echo "Backend:  http://$PUBLIC_IP:8080"
+          echo "Database: $PUBLIC_IP:5432"
+          echo "Redis:    $PUBLIC_IP:6379"
           echo "========================================"
-          docker ps --filter "name=loja_" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          docker-compose ps
