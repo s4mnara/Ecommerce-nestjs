@@ -1,0 +1,28 @@
+name: CD - Validation Only
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t loja_api ./api
+
+      - name: Build frontend image
+        run: docker build -t loja_frontend ./frontend
+
+      - name: Validate docker-compose
+        run: docker-compose config
+
+      - name: Simulate deploy
+        run: |
+          docker-compose up -d
+          sleep 15
+          docker-compose ps

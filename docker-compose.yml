@@ -15,19 +15,22 @@ services:
     networks:  
       - loja-network
 
+
   frontend:
-    build: 
+    build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: loja_frontend
+      args:
+        - REACT_APP_API_URL=http://localhost:8080
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
     ports:
       - "3000:80"
-    env_file:
-      - ./frontend/.env
     depends_on:
       - api
-    networks: 
+    networks:
       - loja-network
+
 
   db:
     image:   postgres:16
