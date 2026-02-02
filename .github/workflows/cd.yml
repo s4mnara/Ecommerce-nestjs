@@ -1,28 +1,91 @@
-name: CD - Validation Only
+name: CD - Fullstack Ecommerce (Docker Compose)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  deploy-validation:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # =========================
+      # Checkout
+      # =========================
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build backend image
+      # =========================
+      # Verificar Docker
+      # =========================
+      - name: Check Docker version
+        run: docker --version
+
+      - name: Check Docker Compose version
+        run: docker compose version
+
+      # =========================
+      # Criar .env do backend (CD)
+      # =========================
+      - name: Create backend .env
+        run: |
+          cat <<EOF > api/.env
+          NODE_ENV=production
+          PORT=3000
+
+          DB_HOST=db
+          DB_PORT=5432
+          DB_USERNAME=postgres
+          DB_PASSWORD=postgres
+          DB_DATABASE=loja_db
+
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+
+          JWT_SECRET=cd_secret
+          EOF
+
+      # =========================
+      # Build das imagens
+      # =========================
+      - name: Build backend Docker image
         run: docker build -t loja_api ./api
 
-      - name: Build frontend image
+      - name: Build frontend Docker image
         run: docker build -t loja_frontend ./frontend
 
+      # =========================
+      # Validar docker-compose
+      # =========================
       - name: Validate docker-compose
         run: docker compose config
 
-      - name: Simulate deploy
+      # =========================
+      # Subir stack (simulação de deploy)
+      # =========================
+      - name: Start application stack
         run: |
           docker compose up -d
-          sleep 15
-          docker compose ps
+          sleep 20
+
+      # =========================
+      # Verificar status dos containers
+      # =========================
+      - name: Check containers status
+        run: docker compose ps
+
+      # =========================
+      # Logs automáticos se falhar
+      # =========================
+      - name: API logs (on failure)
+        if: failure()
+        run: docker logs loja_api
+
+      - name: DB logs (on failure)
+        if: failure()
+        run: docker logs loja_db
+
+      - name: Frontend logs (on failure)
+        if: failure()
+        run: docker logs loja_frontend
