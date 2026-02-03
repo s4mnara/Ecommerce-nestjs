@@ -99,10 +99,22 @@ export class CarrinhoService {
     0,
   );
 
-  await this.carrinhoRepository.save(carrinho);
-  await this.limparCache(usuarioId);
+await this.carrinhoRepository.save(carrinho);
+await this.limparCache(usuarioId);
 
-  return this.obterCarrinho(usuarioId);
+//  LOG DE AUDITORIA 
+await this.logsService.registrarLog({
+  usuarioId,
+  acao: 'Adicionar produto ao carrinho',
+  detalhes: {
+    produtoId,
+    quantidade,
+    subtotal: preco * quantidade,
+  },
+});
+
+return this.obterCarrinho(usuarioId);
+
 }
 
 private async limparCache(usuarioId: number) {
