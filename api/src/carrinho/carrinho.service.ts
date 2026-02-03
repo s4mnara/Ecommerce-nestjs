@@ -43,71 +43,74 @@ export class CarrinhoService {
   // ========================
   // ADICIONAR PRODUTO
   // ========================
-  async adicionarProduto(
-    usuarioId: number,
-    produtoId: number,
-    quantidade: number,
-  ) {
-    const usuario = await this.usuarioRepository. findOne({
-      where: { id: usuarioId },
-    });
-    if (!usuario) throw new NotFoundException('Usuário não encontrado.');
+ async adicionarProduto(
+  usuarioId: number,
+  produtoId: number,
+  quantidade: number,
+) {
+  if (!quantidade || quantidade <= 0) quantidade = 1;
 
-    const produto = await this.produtoRepository.findOne({
-      where: { id: produtoId },
-    });
-    if (!produto) throw new NotFoundException('Produto não encontrado.');
+  const usuario = await this.usuarioRepository.findOne({
+    where: { id: usuarioId },
+  });
+  if (!usuario) throw new NotFoundException('Usuário não encontrado.');
 
-    let carrinho = await this.carrinhoRepository.findOne({
-      where: { usuario: { id:  usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
-    });
+  const produto = await this.produtoRepository.findOne({
+    where: { id: produtoId },
+  });
+  if (!produto) throw new NotFoundException('Produto não encontrado.');
 
-    if (!carrinho) {
-      carrinho = this.carrinhoRepository.create({
+  const preco = Number(produto.preco);
+
+  let carrinho = await this.carrinhoRepository.findOne({
+    where: { usuario: { id: usuarioId } },
+    relations: ['itens', 'itens.produto', 'usuario'],
+  });
+
+  if (!carrinho) {
+    carrinho = await this.carrinhoRepository.save(
+      this.carrinhoRepository.create({
         usuario,
         itens: [],
         total: 0,
-      });
-      carrinho = await this.carrinhoRepository.save(carrinho);
-    }
-
-    let item = carrinho.itens.find(
-      i => i.produto.id === produto.id,
+      }),
     );
-
-    if (item) {
-      item.quantidade += quantidade;
-      item.subtotal = item.quantidade * produto.preco;
-      await this.itemCarrinhoRepository. save(item);
-    } else {
-      const novoItem = this.itemCarrinhoRepository.create({
-        carrinho,
-        produto,
-        quantidade,
-        subtotal: produto.preco * quantidade,
-      });
-      await this.itemCarrinhoRepository. save(novoItem);
-      carrinho. itens.push(novoItem);
-    }
-
-    carrinho. total = carrinho.itens. reduce(
-      (acc, i) => acc + i.subtotal,
-      0,
-    );
-    await this.carrinhoRepository.save(carrinho);
-
-    // Limpar cache
-    await this.redis.del(this.carrinhoKey(usuarioId));
-
-    await this.logsService.registrarLog({
-      usuarioId,
-      acao: 'Adicionar produto ao carrinho',
-      detalhes: { produtoId, quantidade },
-    });
-
-    return this.obterCarrinho(usuarioId);
   }
+
+  let item = carrinho.itens.find(i => i.produto.id === produto.id);
+
+  if (item) {
+    item.quantidade += quantidade;
+    item.subtotal = item.quantidade * preco;
+    await this.itemCarrinhoRepository.save(item);
+  } else {
+    const novoItem = this.itemCarrinhoRepository.create({
+      carrinho,
+      produto,
+      quantidade,
+      subtotal: preco * quantidade,
+    });
+    await this.itemCarrinhoRepository.save(novoItem);
+    carrinho.itens.push(novoItem);
+  }
+
+  carrinho.total = carrinho.itens.reduce(
+    (acc, i) => acc + Number(i.subtotal),
+    0,
+  );
+
+  await this.carrinhoRepository.save(carrinho);
+  await this.limparCache(usuarioId);
+
+  return this.obterCarrinho(usuarioId);
+}
+
+private async limparCache(usuarioId: number) {
+  if (this.redis) {
+    await this.redis.del(this.carrinhoKey(usuarioId));
+  }
+}
+
 
   // ========================
   // ATUALIZAR QUANTIDADE
@@ -143,7 +146,7 @@ export class CarrinhoService {
     await this.carrinhoRepository.save(carrinho);
 
     // Limpar cache
-    await this.redis.del(this.carrinhoKey(usuarioId));
+    await this.limparCache(usuarioId);
 
     await this.logsService.registrarLog({
       usuarioId,
@@ -181,7 +184,7 @@ export class CarrinhoService {
     await this.carrinhoRepository.save(carrinho);
 
     // Limpar cache
-    await this. redis.del(this.carrinhoKey(usuarioId));
+    await this.limparCache(usuarioId);
 
     await this.logsService. registrarLog({
       usuarioId,
