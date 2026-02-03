@@ -9,8 +9,11 @@ export class Pedido {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Usuario, usuario => usuario.pedidos, { eager: true })
-  @JoinColumn()
+    @ManyToOne(() => Usuario, usuario => usuario.pedidos, {
+    eager: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'usuarioId' })
   usuario: Usuario;
 
   @OneToMany(() => ItemPedido, item => item.pedido, { cascade: true, eager: true })

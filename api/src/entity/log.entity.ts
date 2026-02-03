@@ -24,7 +24,11 @@ export class Log {
   @CreateDateColumn()
   criadoEm: Date;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.logs, { nullable: true, onDelete: 'SET NULL' }) // CORRETO
-  @JoinColumn({ name: 'usuarioId' })
-  usuario: Usuario;
+  @ManyToOne(() => Usuario, usuario => usuario.logs, {
+  nullable: true,
+  onDelete: 'SET NULL',
+})
+@JoinColumn({ name: 'usuarioId' })
+usuario: Usuario;
+
 }

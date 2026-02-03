@@ -7,7 +7,9 @@ export class Carrinho {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Usuario, usuario => usuario.carrinhos)
+  @ManyToOne(() => Usuario, usuario => usuario.carrinhos, {
+    onDelete: 'CASCADE',
+  })
   usuario: Usuario;
 
   @OneToMany(() => ItemCarrinho, item => item.carrinho, { cascade: ['insert', 'update'], eager: true })
