@@ -1,28 +1,41 @@
-// src/pagamentos/pagamentos.controller.ts
-import { Controller, Post, Param, Get, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
 import { PagamentosService } from './pagamentos.service';
+import { ProcessarPagamentoDto } from './dto/processar-pagamento.dto';
 
 @Controller('pagamentos')
 export class PagamentosController {
   constructor(private readonly pagamentosService: PagamentosService) {}
 
-  /**
-   * Inicia o pagamento falso e retorna o resumo do pedido
-   * @param usuarioId
-   */
-  @Post('iniciar/:usuarioId')
-  async iniciar(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
-    const result = await this.pagamentosService.processarPagamentoFalso(usuarioId);
-    return result;
-  }
+  @Post()
+  async pagar(@Body() dto: ProcessarPagamentoDto) {
+    switch (dto.metodo) {
+      case 'cartao':
+        if (!dto.numeroCartao || !dto.parcelas) {
+          throw new BadRequestException(
+            'Número do cartão e parcelas são obrigatórios',
+          );
+        }
 
-  /**
-   * Retorna resumo do pedido
-   * @param orderId
-   */
-  @Get('sucesso/:orderId')
-  async sucesso(@Param('orderId', ParseIntPipe) orderId: number) {
-    const resumo = await this.pagamentosService.obterResumoPedido(orderId);
-    return resumo;
+        return this.pagamentosService.pagarComCartao(
+          dto.valor,
+          dto.parcelas,
+          dto.numeroCartao,
+        );
+
+      case 'pix':
+        return this.pagamentosService.pagarComPix(dto.valor);
+
+      case 'boleto':
+        return this.pagamentosService.pagarComBoleto(dto.valor);
+
+      default:
+        throw new BadRequestException('Método de pagamento inválido');
+    }
   }
 }
+

@@ -18,6 +18,7 @@ import { ItemPedido } from './entity/item-pedido.entity';
 import { RedisModule } from './redis/redis.module';
 import { LogsModule } from './logs-usuario/logs.module';
 import { Log } from './entity/log.entity';
+import { Pagamento } from './entity/pagamento.entity';
 
 
 @Module({
@@ -37,7 +38,8 @@ import { Log } from './entity/log.entity';
         Pedido,
         ItemCarrinho,
         ItemPedido,
-        Log  
+        Log,
+        Pagamento
       ],
       synchronize: true,
     }),

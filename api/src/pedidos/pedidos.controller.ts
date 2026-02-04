@@ -1,15 +1,22 @@
 import { Controller, Get, Post, Body, Param, Delete, Put, ParseIntPipe } from '@nestjs/common';
 import { PedidosService } from './pedidos.service';
-import { Pedido, StatusPedido } from '../entity/pedido.entity';
+import { ProcessarPagamentoDto } from '../pagamento/dto/processar-pagamento.dto';
 
 @Controller('pedidos')
 export class PedidosController {
   constructor(private readonly pedidosService: PedidosService) {}
 
   @Post(':usuarioId')
-  criarPedido(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
-    return this.pedidosService.criarPedidoAPartirDoCarrinho(usuarioId);
-  }
+    criarPedido(
+      @Param('usuarioId', ParseIntPipe) usuarioId: number,
+      @Body() pagamentoDto: ProcessarPagamentoDto,
+    ) {
+      return this.pedidosService.criarPedidoAPartirDoCarrinho(
+        usuarioId,
+        pagamentoDto,
+      );
+    }
+
 
   @Get('usuario/:usuarioId')
   findByUsuarioId(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
@@ -35,5 +42,13 @@ export class PedidosController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.pedidosService.remove(id);
+  }
+
+  @Post('checkout/:usuarioId')
+  checkout(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Body() dto: ProcessarPagamentoDto,
+  ) {
+    return this.pedidosService.criarPedidoAPartirDoCarrinho(usuarioId, dto);
   }
 }

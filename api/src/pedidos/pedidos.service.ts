@@ -14,6 +14,9 @@ import { ItemCarrinho } from '../entity/item-carrinho.entity';
 import { Produto } from '../entity/produto.entity';
 import { Usuario } from '../entity/usuario.entity';
 import { LogsService } from '../logs-usuario/logs.service';
+import { PagamentosService } from '../pagamento/pagamentos.service';
+import { ProcessarPagamentoDto } from '../pagamento/dto/processar-pagamento.dto';
+import { Pagamento } from 'src/entity/pagamento.entity';
 
 @Injectable()
 export class PedidosService {
@@ -36,32 +39,26 @@ export class PedidosService {
     private produtoRepo: Repository<Produto>,
 
     private readonly logsService: LogsService,
+
+    @InjectRepository(Pagamento)
+    private pagamentoRepo: Repository<Pagamento>,
+
+    private readonly pagamentosService: PagamentosService,
   ) {}
 
   // ============================================================
   // CRIAR PEDIDO
   // ============================================================
-  async criarPedidoAPartirDoCarrinho(usuarioId: number) {
+  async criarPedidoAPartirDoCarrinho(
+    usuarioId: number,
+    pagamentoDto: ProcessarPagamentoDto,
+  ) {
     const carrinho = await this.carrinhoRepo.findOne({
       where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto', 'usuario'],
+      relations: ['itens', 'itens.produto'],
     });
 
-    if (!carrinho) {
-      await this.logsService.registrarLog({
-        usuarioId,
-        acao: 'Falha ao criar pedido',
-        detalhes: 'Carrinho não encontrado',
-      });
-      throw new NotFoundException('Carrinho não encontrado.');
-    }
-
-    if (!carrinho.itens || carrinho.itens.length === 0) {
-      await this.logsService.registrarLog({
-        usuarioId,
-        acao: 'Falha ao criar pedido',
-        detalhes: 'Carrinho vazio',
-      });
+    if (!carrinho || !carrinho.itens.length) {
       throw new BadRequestException('Carrinho vazio.');
     }
 
@@ -70,158 +67,101 @@ export class PedidosService {
     await queryRunner.startTransaction();
 
     try {
-      const produtoRepoQR = queryRunner.manager.getRepository(Produto);
-      const pedidoRepoQR = queryRunner.manager.getRepository(Pedido);
-      const itemPedidoRepoQR = queryRunner.manager.getRepository(ItemPedido);
-      const itemCarrinhoRepoQR = queryRunner.manager.getRepository(ItemCarrinho);
-      const carrinhoRepoQR = queryRunner.manager.getRepository(Carrinho);
+      const pedidoRepo = queryRunner.manager.getRepository(Pedido);
+      const itemPedidoRepo = queryRunner.manager.getRepository(ItemPedido);
+      const pagamentoRepo = queryRunner.manager.getRepository(Pagamento);
+      const carrinhoRepo = queryRunner.manager.getRepository(Carrinho);
+      const itemCarrinhoRepo = queryRunner.manager.getRepository(ItemCarrinho);
 
-      // 1 — Validação de estoque
-      for (const item of carrinho.itens) {
-        const produto = await produtoRepoQR.findOne({
-          where: { id: item.produto.id },
-          lock: { mode: 'pessimistic_write' },
-        });
-
-        if (!produto) {
-          await queryRunner.rollbackTransaction();
-          await this.logsService.registrarLog({
-            usuarioId,
-            acao: 'Falha ao criar pedido',
-            detalhes: `Produto ${item.produto.id} não encontrado`,
-          });
-          throw new NotFoundException(`Produto ${item.produto.id} não encontrado.`);
-        }
-
-        if (produto.estoque < item.quantidade) {
-          await queryRunner.rollbackTransaction();
-          await this.logsService.registrarLog({
-            usuarioId,
-            acao: 'Falha ao criar pedido',
-            detalhes: `Estoque insuficiente para produto ${produto.id}`,
-          });
-          throw new BadRequestException(
-            `Estoque insuficiente para o produto "${produto.nome}".`,
-          );
-        }
-      }
-
-      // 2 — Deduzir estoque
-      for (const item of carrinho.itens) {
-        await produtoRepoQR.decrement(
-          { id: item.produto.id } as any,
-          'estoque',
-          item.quantidade,
-        );
-      }
-
-      // 3 — Criar pedido pendente
-      const totalPedido = carrinho.itens.reduce(
-        (acc, it) => acc + Number(it.subtotal),
+      const total = carrinho.itens.reduce(
+        (acc, i) => acc + Number(i.subtotal),
         0,
       );
 
-      const novoPedido = pedidoRepoQR.create({
+      let resultadoPagamento;
+
+      switch (pagamentoDto.metodo) {
+        case 'cartao':
+          if (!pagamentoDto.numeroCartao || !pagamentoDto.parcelas) {
+            throw new BadRequestException('Dados do cartão inválidos');
+          }
+          resultadoPagamento =
+            await this.pagamentosService.pagarComCartao(
+              total,
+              pagamentoDto.parcelas,
+              pagamentoDto.numeroCartao,
+            );
+          break;
+
+        case 'pix':
+          resultadoPagamento =
+            await this.pagamentosService.pagarComPix(total);
+          break;
+
+        case 'boleto':
+          resultadoPagamento =
+            await this.pagamentosService.pagarComBoleto(total);
+          break;
+
+        default:
+          throw new BadRequestException('Método inválido');
+      }
+
+      const pedido = pedidoRepo.create({
         usuario: { id: usuarioId } as Usuario,
-        total: totalPedido,
-        status: 'pendente' as StatusPedido,
+        total,
+        status:
+          resultadoPagamento.status === 'APPROVED'
+            ? 'finalizado'
+            : 'pendente',
       });
 
-      const pedidoSalvo = await pedidoRepoQR.save(novoPedido);
+      const pedidoSalvo = await pedidoRepo.save(pedido);
 
-      // 4 — Criar itens do pedido
       for (const item of carrinho.itens) {
-        const itemPedido = itemPedidoRepoQR.create({
+        await itemPedidoRepo.save({
           pedido: pedidoSalvo,
           produto: item.produto,
           quantidade: item.quantidade,
           subtotal: item.subtotal,
         });
-
-        await itemPedidoRepoQR.save(itemPedido);
-
-        await this.logsService.registrarLog({
-          usuarioId,
-          acao: 'Item adicionado ao pedido',
-          detalhes: {
-            pedidoId: pedidoSalvo.id,
-            produtoId: item.produto.id,
-            quantidade: item.quantidade,
-          },
-        });
       }
 
-      // 5 — Limpar carrinho
-      const itemIds = carrinho.itens.map((i) => i.id);
-      if (itemIds.length > 0) {
-        await itemCarrinhoRepoQR.delete(itemIds);
-      }
+      await pagamentoRepo.save({
+        pedido: pedidoSalvo,
+        metodo: resultadoPagamento.metodo,
+        status: resultadoPagamento.status,
+        valorOriginal: resultadoPagamento.valorOriginal ?? total,
+        valorFinal: resultadoPagamento.valorFinal ?? total,
+        parcelas: resultadoPagamento.parcelas ?? null,
+        bandeira: resultadoPagamento.bandeira ?? null,
+        codigoPix: resultadoPagamento.qrCode ?? null,
+        linhaDigitavelBoleto: resultadoPagamento.codigoBoleto ?? null,
+        transactionId: resultadoPagamento.transacaoId,
+      });
+
+      await itemCarrinhoRepo.delete(carrinho.itens.map(i => i.id));
+
       carrinho.itens = [];
       carrinho.total = 0;
-      await carrinhoRepoQR.save(carrinho);
-
-      // 6 — Processar pagamento
-      const pagamentoSucesso = await this.processarPagamento(usuarioId, totalPedido);
-
-      if (pagamentoSucesso) {
-        pedidoSalvo.status = 'finalizado';
-        await pedidoRepoQR.save(pedidoSalvo);
-
-        await this.logsService.registrarLog({
-          usuarioId,
-          acao: 'Pedido finalizado',
-          detalhes: { pedidoId: pedidoSalvo.id, total: totalPedido },
-        });
-      } else {
-        await this.logsService.registrarLog({
-          usuarioId,
-          acao: 'Pagamento falhou - pedido pendente',
-          detalhes: { pedidoId: pedidoSalvo.id, total: totalPedido },
-        });
-      }
+      await carrinhoRepo.save(carrinho);
 
       await queryRunner.commitTransaction();
 
       return {
-        success: true,
-        message: pagamentoSucesso
-          ? 'Pedido criado e finalizado com sucesso.'
-          : 'Pedido criado, aguardando pagamento.',
-        orderId: pedidoSalvo.id,
-        total: Number(pedidoSalvo.total),
+        pedidoId: pedidoSalvo.id,
         status: pedidoSalvo.status,
+        pagamento: resultadoPagamento,
       };
-    } catch (err) {
-      try {
-        await queryRunner.rollbackTransaction();
-      } catch {}
-
-      await this.logsService.registrarLog({
-        usuarioId,
-        acao: 'Erro ao criar pedido',
-        detalhes: { error: err.message },
-      });
-
-      if (err instanceof NotFoundException || err instanceof BadRequestException) {
-        throw err;
-      }
-
-      throw new InternalServerErrorException('Falha ao criar pedido.');
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      throw e;
     } finally {
       await queryRunner.release();
     }
   }
 
-  // ============================================================
-  // MÉTODO SIMULADO DE PAGAMENTO
-  // ============================================================
-  private async processarPagamento(
-    usuarioId: number,
-    total: number,
-  ): Promise<boolean> {
-    // Simulação: 80% de chance de sucesso
-    return Math.random() > 0.2;
-  }
+
 
   // ============================================================
   // ATUALIZAR STATUS MANUALMENTE
