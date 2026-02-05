@@ -2,11 +2,9 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Pedido, StatusPedido } from '../entity/pedido.entity';
 import { ItemPedido } from '../entity/item-pedido.entity';
 import { Carrinho } from '../entity/carrinho.entity';

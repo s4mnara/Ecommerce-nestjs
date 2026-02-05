@@ -9,6 +9,11 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { CarrinhoService } from './carrinho.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UseGuards } from '@nestjs/common';
+import { use } from 'passport';
 
 @Controller('carrinho')
 export class CarrinhoController {
@@ -16,9 +21,8 @@ export class CarrinhoController {
     private readonly carrinhoService: CarrinhoService,
   ) {}
 
-  // ========================
-  // VER CARRINHO
-  // ========================
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
   @Get(':usuarioId')
   async verCarrinho(
     @Param('usuarioId', ParseIntPipe) usuarioId: number,
@@ -26,9 +30,8 @@ export class CarrinhoController {
     return this.carrinhoService.obterCarrinho(usuarioId);
   }
 
-  // ========================
-  // ADICIONAR PRODUTO
-  // ========================
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
   @Post(':usuarioId/adicionar')
   async adicionarProduto(
     @Param('usuarioId', ParseIntPipe) usuarioId: number,
@@ -46,7 +49,9 @@ export class CarrinhoController {
   // ========================
   // ATUALIZAR QUANTIDADE
   // ========================
-  @Put(':usuarioId/atualizar/:produtoId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
+  @Put(':usuarioId/atualizar/:produtoId') 
   async atualizarQuantidade(
     @Param('usuarioId', ParseIntPipe) usuarioId: number,
     @Param('produtoId', ParseIntPipe) produtoId: number,
@@ -62,6 +67,8 @@ export class CarrinhoController {
   // ========================
   // REMOVER PRODUTO
   // ========================
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
   @Delete(':usuarioId/remover/:produtoId')
   async removerProduto(
     @Param('usuarioId', ParseIntPipe) usuarioId: number,
@@ -76,6 +83,8 @@ export class CarrinhoController {
   // ========================
   // LIMPAR CARRINHO
   // ========================
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
   @Delete(':usuarioId/limpar')
   async limparCarrinho(
     @Param('usuarioId', ParseIntPipe) usuarioId: number,

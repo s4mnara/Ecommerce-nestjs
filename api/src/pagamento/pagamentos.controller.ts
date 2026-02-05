@@ -7,13 +7,20 @@ import {
 import { PagamentosService } from './pagamentos.service';
 import { ProcessarPagamentoDto } from './dto/processar-pagamento.dto';
 import { MetodoPagamentoService } from './metodos-pagamento.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UseGuards } from '@nestjs/common';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('cliente')
 @Controller('pagamentos')
 export class PagamentosController {
   constructor(
     private readonly pagamentosService: PagamentosService,
     private readonly metodoPagamentoService: MetodoPagamentoService, 
   ) {}
+
 
  @Post()
 async pagar(@Body() dto: ProcessarPagamentoDto) {

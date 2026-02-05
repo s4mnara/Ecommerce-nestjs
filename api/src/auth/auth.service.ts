@@ -80,7 +80,7 @@ export class AuthService {
   : undefined;
 
     const usuario = await this.usuariosService.create({
-      nomeCompleto: dto.nomeCompleto,
+      nome: dto.nome,
       email: dto.email,
       senha: hashSenha,
       telefone: dto.telefone,

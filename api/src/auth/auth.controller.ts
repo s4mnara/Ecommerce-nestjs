@@ -7,22 +7,25 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // Registro apenas para CLIENTE
   @Post('cliente/register')
-  async register(@Body() body: RegisterDto) {
-    const usuario = await this.authService.register(body.nome, body.email, body.senha);
+  async register(@Body() dto: RegisterDto) {
+    const usuario = await this.authService.register(dto);
+
     return {
       message: 'Cliente cadastrado com sucesso!',
       id: usuario.id,
-      nome: usuario.nome,
+      nomeCompleto: usuario.nome,
       email: usuario.email,
     };
   }
 
-  // Login (admin e cliente usam o mesmo fluxo)
   @Post('login')
   async login(@Body() body: LoginDto) {
-    const usuario = await this.authService.validateUser(body.email, body.senha);
+    const usuario = await this.authService.validateUser(
+      body.email,
+      body.senha,
+    );
+
     return this.authService.login(usuario);
   }
 }

@@ -3,7 +3,7 @@ import { IsCPF } from '../../common/validators/cpf.validator';
 
 export class RegisterDto {
   @IsNotEmpty()
-  nomeCompleto: string;
+  nome: string;
 
   @IsEmail()
   email: string;
