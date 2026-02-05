@@ -6,7 +6,8 @@ import { Usuario } from '../entity/usuario.entity';
 @Injectable()
 export class UsuariosService {
   constructor(
-    @InjectRepository(Usuario) private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Usuario)
+    private readonly usuarioRepository: Repository<Usuario>,
   ) {}
 
   async create(usuario: Partial<Usuario>): Promise<Usuario> {
@@ -17,7 +18,7 @@ export class UsuariosService {
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
     return this.usuarioRepository.findOne({
       where: { email },
-      select: ['id', 'nome', 'email', 'senha', 'role', 'telegramChatId'],
+      select: ['id', 'nomeCompleto', 'email', 'senha', 'role'],
     });
   }
 
@@ -27,14 +28,16 @@ export class UsuariosService {
 
   async findOne(id: number): Promise<Usuario> {
     const usuario = await this.usuarioRepository.findOneBy({ id });
-    if (!usuario) throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+    if (!usuario) {
+      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+    }
     return usuario;
   }
 
-  async update(id: number, usuario: Partial<Usuario>): Promise<Usuario> {
-    const existente = await this.findOne(id);
-    Object.assign(existente, usuario);
-    return this.usuarioRepository.save(existente);
+  async update(id: number, dados: Partial<Usuario>): Promise<Usuario> {
+    const usuario = await this.findOne(id);
+    Object.assign(usuario, dados);
+    return this.usuarioRepository.save(usuario);
   }
 
   async remove(id: number): Promise<void> {
@@ -42,5 +45,3 @@ export class UsuariosService {
     await this.usuarioRepository.remove(usuario);
   }
 }
-
-

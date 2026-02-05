@@ -1,7 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+} from 'typeorm';
 import { Carrinho } from './carrinho.entity';
 import { Pedido } from './pedido.entity';
 import { Log } from './log.entity';
+import { Endereco } from './endereco.embedded';
 
 @Entity()
 export class Usuario {
@@ -9,21 +15,31 @@ export class Usuario {
   id: number;
 
   @Column()
-  nome: string;
+  nomeCompleto: string;
 
   @Column({ unique: true })
   email: string;
 
-  // senha não é retornada por padrão
   @Column({ select: false })
   senha: string;
 
-  // role: 'cliente' ou 'admin'
   @Column({ default: 'cliente' })
   role: string;
 
+  @Column({ nullable: true })
+  telefone?: string;
+
+  @Column({ nullable: true, unique: true })
+  cpf?: string;
+
+  @Column({ type: 'date', nullable: true })
+  dataNascimento?: Date;
+
   @Column({ type: 'varchar', nullable: true, unique: true })
-  telegramChatId: string;
+  telegramChatId?: string;
+
+  @Column(() => Endereco)
+  endereco: Endereco;
 
   @OneToMany(() => Carrinho, carrinho => carrinho.usuario)
   carrinhos: Carrinho[];
@@ -33,5 +49,4 @@ export class Usuario {
 
   @OneToMany(() => Log, log => log.usuario)
   logs: Log[];
-
 }

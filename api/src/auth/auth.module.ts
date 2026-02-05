@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LogsModule } from 'src/logs-usuario/logs.module';
+import { EnderecoModule } from 'src/endereco/enderco.module';
 
 @Module({
   imports: [
@@ -13,7 +14,9 @@ import { LogsModule } from 'src/logs-usuario/logs.module';
     ConfigModule,
     LogsModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule,
+        EnderecoModule
+      ],
       useFactory: async (configService: ConfigService) => {
         const secret = configService.getOrThrow<string>('JWT_SECRET');
         const expiresIn = configService.getOrThrow<string>('JWT_EXPIRES_IN');

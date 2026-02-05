@@ -1,32 +1,48 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { Usuario } from '../entity/usuario.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LogsService } from '../logs-usuario/logs.service';
+import { RegisterDto } from './dto/register.dto';
+import { ViaCepService } from '../endereco/viacep.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usuariosService: UsuariosService,
     private readonly jwtService: JwtService,
-    private readonly logsService: LogsService, 
+    private readonly logsService: LogsService,
+    private readonly viaCepService: ViaCepService,
   ) {}
 
-  async validateUser(email: string, senha: string): Promise<Usuario> {
-    const usuario = await this.usuariosService.findByEmailWithPassword(email);
+  async validateUser(email: string, senha: string) {
+    const usuario =
+      await this.usuariosService.findByEmailWithPassword(email);
 
-    if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
 
     const senhaValida = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaValida) throw new UnauthorizedException('Senha incorreta');
+    if (!senhaValida) {
+      throw new UnauthorizedException('Senha incorreta');
+    }
 
     const { senha: _, ...usuarioSemSenha } = usuario;
-    return usuarioSemSenha as Usuario;
+    return usuarioSemSenha;
   }
 
-  async login(usuario: Usuario) {
-    const payload = { sub: usuario.id, email: usuario.email, role: usuario.role };
+  async login(usuario: any) {
+    const payload = {
+      sub: usuario.id,
+      email: usuario.email,
+      role: usuario.role,
+    };
+
     const token = this.jwtService.sign(payload);
 
     await this.logsService.registrarLog({
@@ -39,30 +55,50 @@ export class AuthService {
       access_token: token,
       usuario: {
         id: usuario.id,
-        nome: usuario.nome,
+        nomeCompleto: usuario.nomeCompleto,
         email: usuario.email,
         role: usuario.role,
       },
     };
   }
 
-  async register(nome: string, email: string, senha: string) {
-    const existente = await this.usuariosService.findByEmailWithPassword(email);
-    if (existente) throw new ConflictException('Email já cadastrado');
+  async register(dto: RegisterDto) {
+    const existente =
+      await this.usuariosService.findByEmailWithPassword(dto.email);
 
-    const hashSenha = await bcrypt.hash(senha, 10);
+    if (existente) {
+      throw new ConflictException('Email já cadastrado');
+    }
+
+    const enderecoViaCep =
+      await this.viaCepService.buscarEndereco(dto.cep);
+
+    const hashSenha = await bcrypt.hash(dto.senha, 10);
+
+    const cpfNormalizado = dto.cpf
+  ? dto.cpf.replace(/\D/g, '')
+  : undefined;
 
     const usuario = await this.usuariosService.create({
-      nome,
-      email,
+      nomeCompleto: dto.nomeCompleto,
+      email: dto.email,
       senha: hashSenha,
+      telefone: dto.telefone,
+      cpf: cpfNormalizado,
+      dataNascimento: dto.dataNascimento,
       role: 'cliente',
+      endereco: {
+        ...enderecoViaCep,
+        numero: dto.numero,
+        complemento: dto.complemento,
+      },
     });
+
 
     await this.logsService.registrarLog({
       usuarioId: usuario.id,
       acao: 'Registro de usuário',
-      detalhes: { email },
+      detalhes: { email: dto.email },
     });
 
     return usuario;
