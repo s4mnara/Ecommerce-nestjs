@@ -18,7 +18,7 @@ export class UsuariosService {
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
     return this.usuarioRepository.findOne({
       where: { email },
-      select: ['id', 'nomeCompleto', 'email', 'senha', 'role'],
+      select: ['id', 'nome', 'email', 'senha', 'role'],
     });
   }
 
