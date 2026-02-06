@@ -44,4 +44,29 @@ export class UsuariosService {
     const usuario = await this.findOne(id);
     await this.usuarioRepository.remove(usuario);
   }
+
+    async incrementarTentativa(usuarioId: number) {
+    await this.usuarioRepository.increment(
+      { id: usuarioId },
+      'tentativasLogin',
+      1,
+    );
+  }
+
+  async bloquearUsuario(usuarioId: number, minutos = 15) {
+    const bloqueio = new Date();
+    bloqueio.setMinutes(bloqueio.getMinutes() + minutos);
+
+    await this.usuarioRepository.update(usuarioId, {
+      bloqueadoAte: bloqueio,
+    });
+  }
+
+  async resetarTentativas(usuarioId: number) {
+    await this.usuarioRepository.update(usuarioId, {
+      tentativasLogin: 0,
+      bloqueadoAte: null,
+    });
+  }
+
 }

@@ -19,22 +19,56 @@ export class AuthService {
     private readonly viaCepService: ViaCepService,
   ) {}
 
-  async validateUser(email: string, senha: string) {
-    const usuario =
-      await this.usuariosService.findByEmailWithPassword(email);
+async validateUser(email: string, senha: string) {
+  const usuario =
+    await this.usuariosService.findByEmailWithPassword(email);
 
-    if (!usuario) {
-      throw new UnauthorizedException('Usuário não encontrado');
-    }
-
-    const senhaValida = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaValida) {
-      throw new UnauthorizedException('Senha incorreta');
-    }
-
-    const { senha: _, ...usuarioSemSenha } = usuario;
-    return usuarioSemSenha;
+  if (!usuario) {
+    throw new UnauthorizedException('Usuário não encontrado');
   }
+
+  if (
+    usuario.bloqueadoAte &&
+    usuario.bloqueadoAte > new Date()
+  ) {
+    throw new UnauthorizedException(
+      'Conta bloqueada por excesso de tentativas. Tente mais tarde.',
+    );
+  }
+
+  const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+  if (!senhaValida) {
+    await this.usuariosService.incrementarTentativa(usuario.id);
+
+    const tentativas = usuario.tentativasLogin + 1;
+
+
+    if (tentativas >= 5) {
+      await this.usuariosService.bloquearUsuario(usuario.id, 15);
+
+      await this.logsService.registrarLog({
+        usuarioId: usuario.id,
+        acao: 'Usuário bloqueado por tentativas de login',
+        detalhes: { email },
+      });
+
+      throw new UnauthorizedException(
+        'Conta bloqueada após 5 tentativas inválidas',
+      );
+    }
+
+    throw new UnauthorizedException(
+      `Senha incorreta. Tentativa ${tentativas}/5`,
+    );
+  }
+
+  await this.usuariosService.resetarTentativas(usuario.id);
+
+  const { senha: _, ...usuarioSemSenha } = usuario;
+  return usuarioSemSenha;
+}
+
 
   async login(usuario: any) {
     const payload = {

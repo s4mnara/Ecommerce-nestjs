@@ -49,4 +49,11 @@ export class Usuario {
 
   @OneToMany(() => Log, log => log.usuario)
   logs: Log[];
+
+  @Column({ default: 0 })
+  tentativasLogin: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  bloqueadoAte: Date | null;
+
 }

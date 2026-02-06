@@ -22,6 +22,9 @@ describe('AuthService', () => {
   const mockUsuariosService = {
     findByEmailWithPassword: jest.fn(),
     create: jest.fn(),
+    incrementarTentativa: jest.fn(),
+    bloquearUsuario: jest.fn(),
+    resetarTentativas: jest.fn(),
   };
 
   const mockJwtService = {
@@ -74,6 +77,8 @@ describe('AuthService', () => {
       email: 'admin@test.com',
       senha: 'hashed',
       role: 'admin',
+      tentativasLogin: 2,
+      bloqueadoAte: null,
     });
 
     const result = await service.validateUser(
@@ -83,6 +88,7 @@ describe('AuthService', () => {
 
     expect(result).toHaveProperty('id');
     expect(result).not.toHaveProperty('senha');
+    expect(mockUsuariosService.resetarTentativas).toHaveBeenCalledWith(1);
   });
 
   it('should throw UnauthorizedException if user not found', async () => {
@@ -93,11 +99,29 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('should throw UnauthorizedException if password is invalid', async () => {
+  it('should throw UnauthorizedException if user is blocked', async () => {
+    mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
+      id: 1,
+      email: 'blocked@test.com',
+      senha: 'hashed',
+      tentativasLogin: 5,
+      bloqueadoAte: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    await expect(
+      service.validateUser('blocked@test.com', '123'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(mockUsuariosService.incrementarTentativa).not.toHaveBeenCalled();
+  });
+
+  it('should increment login attempts when password is invalid', async () => {
     mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
       id: 1,
       email: 'test@test.com',
       senha: 'hashed',
+      tentativasLogin: 2,
+      bloqueadoAte: null,
     });
 
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
@@ -105,6 +129,32 @@ describe('AuthService', () => {
     await expect(
       service.validateUser('test@test.com', 'wrong'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(mockUsuariosService.incrementarTentativa).toHaveBeenCalledWith(1);
+  });
+
+  it('should block user after 5 invalid login attempts', async () => {
+    mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
+      id: 1,
+      email: 'lock@test.com',
+      senha: 'hashed',
+      tentativasLogin: 4,
+      bloqueadoAte: null,
+    });
+
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      service.validateUser('lock@test.com', 'wrong'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(mockUsuariosService.incrementarTentativa).toHaveBeenCalledWith(1);
+    expect(mockUsuariosService.bloquearUsuario).toHaveBeenCalledWith(1, 15);
+    expect(mockLogsService.registrarLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acao: 'Usuário bloqueado por tentativas de login',
+      }),
+    );
   });
 
   // =====================================================
@@ -161,7 +211,7 @@ describe('AuthService', () => {
     );
     expect(mockUsuariosService.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        cpf: '52998224725', // CPF normalizado
+        cpf: '52998224725',
       }),
     );
     expect(mockLogsService.registrarLog).toHaveBeenCalled();
