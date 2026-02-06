@@ -7,12 +7,15 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LogsModule } from 'src/logs-usuario/logs.module';
 import { EnderecoModule } from 'src/endereco/enderco.module';
+import { EmailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     UsuariosModule,
     ConfigModule,
     LogsModule,
+    EmailModule,
+    EnderecoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule,
         EnderecoModule

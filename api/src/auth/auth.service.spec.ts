@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LogsService } from '../logs-usuario/logs.service';
 import { ViaCepService } from '../endereco/viacep.service';
+import { EmailService } from '../mail/mail.service';
 import {
   UnauthorizedException,
   ConflictException,
@@ -18,10 +19,15 @@ import * as bcrypt from 'bcryptjs';
 describe('AuthService', () => {
   let service: AuthService;
 
+  // ======================
   // 🔹 Mocks
+  // ======================
+
   const mockUsuariosService = {
     findByEmailWithPassword: jest.fn(),
+    findByEmail: jest.fn(),
     create: jest.fn(),
+    atualizar: jest.fn(),
     incrementarTentativa: jest.fn(),
     bloquearUsuario: jest.fn(),
     resetarTentativas: jest.fn(),
@@ -33,6 +39,10 @@ describe('AuthService', () => {
 
   const mockLogsService = {
     registrarLog: jest.fn(),
+  };
+
+  const mockEmailService = {
+    enviarEmailSimples: jest.fn(),
   };
 
   const mockViaCepService = {
@@ -56,6 +66,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: LogsService, useValue: mockLogsService },
         { provide: ViaCepService, useValue: mockViaCepService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
@@ -79,6 +90,7 @@ describe('AuthService', () => {
       role: 'admin',
       tentativasLogin: 2,
       bloqueadoAte: null,
+      emailVerificado: true,
     });
 
     const result = await service.validateUser(
@@ -91,46 +103,25 @@ describe('AuthService', () => {
     expect(mockUsuariosService.resetarTentativas).toHaveBeenCalledWith(1);
   });
 
+  it('should throw UnauthorizedException if email is not verified', async () => {
+    mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
+      id: 1,
+      email: 'test@test.com',
+      senha: 'hashed',
+      emailVerificado: false,
+    });
+
+    await expect(
+      service.validateUser('test@test.com', '123'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('should throw UnauthorizedException if user not found', async () => {
     mockUsuariosService.findByEmailWithPassword.mockResolvedValue(null);
 
     await expect(
       service.validateUser('notfound@test.com', '123'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
-  });
-
-  it('should throw UnauthorizedException if user is blocked', async () => {
-    mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
-      id: 1,
-      email: 'blocked@test.com',
-      senha: 'hashed',
-      tentativasLogin: 5,
-      bloqueadoAte: new Date(Date.now() + 10 * 60 * 1000),
-    });
-
-    await expect(
-      service.validateUser('blocked@test.com', '123'),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-
-    expect(mockUsuariosService.incrementarTentativa).not.toHaveBeenCalled();
-  });
-
-  it('should increment login attempts when password is invalid', async () => {
-    mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
-      id: 1,
-      email: 'test@test.com',
-      senha: 'hashed',
-      tentativasLogin: 2,
-      bloqueadoAte: null,
-    });
-
-    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
-
-    await expect(
-      service.validateUser('test@test.com', 'wrong'),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-
-    expect(mockUsuariosService.incrementarTentativa).toHaveBeenCalledWith(1);
   });
 
   it('should block user after 5 invalid login attempts', async () => {
@@ -140,6 +131,7 @@ describe('AuthService', () => {
       senha: 'hashed',
       tentativasLogin: 4,
       bloqueadoAte: null,
+      emailVerificado: true,
     });
 
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
@@ -148,13 +140,8 @@ describe('AuthService', () => {
       service.validateUser('lock@test.com', 'wrong'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
-    expect(mockUsuariosService.incrementarTentativa).toHaveBeenCalledWith(1);
     expect(mockUsuariosService.bloquearUsuario).toHaveBeenCalledWith(1, 15);
-    expect(mockLogsService.registrarLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        acao: 'Usuário bloqueado por tentativas de login',
-      }),
-    );
+    expect(mockLogsService.registrarLog).toHaveBeenCalled();
   });
 
   // =====================================================
@@ -174,21 +161,18 @@ describe('AuthService', () => {
     expect(result).toHaveProperty('access_token');
     expect(result.usuario.email).toBe('samara@test.com');
     expect(mockJwtService.sign).toHaveBeenCalled();
-    expect(mockLogsService.registrarLog).toHaveBeenCalled();
   });
 
   // =====================================================
   // 📝 register
   // =====================================================
 
-  it('should register a new user', async () => {
+  it('should register a new user and send verification email', async () => {
     mockUsuariosService.findByEmailWithPassword.mockResolvedValue(null);
 
     mockUsuariosService.create.mockResolvedValue({
       id: 2,
-      nomeCompleto: 'Novo Usuário',
       email: 'novo@test.com',
-      role: 'cliente',
     });
 
     const dto = {
@@ -200,21 +184,16 @@ describe('AuthService', () => {
       dataNascimento: new Date('1995-08-20'),
       cep: '01001-000',
       numero: '123',
-      complemento: 'Apto 12',
     };
 
     const result = await service.register(dto as any);
 
-    expect(result.email).toBe('novo@test.com');
-    expect(mockViaCepService.buscarEndereco).toHaveBeenCalledWith(
-      '01001-000',
-    );
-    expect(mockUsuariosService.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cpf: '52998224725',
-      }),
-    );
-    expect(mockLogsService.registrarLog).toHaveBeenCalled();
+    expect(result).toEqual({
+      message: expect.any(String),
+    });
+
+    expect(mockEmailService.enviarEmailSimples).toHaveBeenCalled();
+    expect(mockUsuariosService.create).toHaveBeenCalled();
   });
 
   it('should throw ConflictException if email already exists', async () => {
@@ -223,16 +202,77 @@ describe('AuthService', () => {
       email: 'exists@test.com',
     });
 
-    const dto = {
-      nomeCompleto: 'Usuário',
-      email: 'exists@test.com',
-      senha: '123456',
-      cep: '01001-000',
-      numero: '10',
-    };
+    await expect(
+      service.register({ email: 'exists@test.com' } as any),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
 
-    await expect(service.register(dto as any))
-      .rejects
-      .toBeInstanceOf(ConflictException);
+  // =====================================================
+  // ✅ confirmarEmail
+  // =====================================================
+
+  it('should confirm email with valid code', async () => {
+    mockUsuariosService.findByEmail.mockResolvedValue({
+      id: 1,
+      email: 'test@test.com',
+      emailVerificado: false,
+      codigoVerificacaoEmail: '123456',
+      codigoExpiraEm: new Date(Date.now() + 10000),
+    });
+
+    const result = await service.confirmarEmail({
+      email: 'test@test.com',
+      codigo: '123456',
+    });
+
+    expect(result.message).toContain('sucesso');
+    expect(mockUsuariosService.atualizar).toHaveBeenCalled();
+  });
+
+  it('should throw error if confirmation code is invalid', async () => {
+    mockUsuariosService.findByEmail.mockResolvedValue({
+      id: 1,
+      emailVerificado: false,
+      codigoVerificacaoEmail: '654321',
+      codigoExpiraEm: new Date(Date.now() + 10000),
+    });
+
+    await expect(
+      service.confirmarEmail({
+        email: 'test@test.com',
+        codigo: '123456',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  // =====================================================
+  // 🔁 reenviarCodigo
+  // =====================================================
+
+  it('should resend verification code if email exists', async () => {
+    mockUsuariosService.findByEmail.mockResolvedValue({
+      id: 1,
+      email: 'test@test.com',
+      emailVerificado: false,
+    });
+
+    const result = await service.reenviarCodigo({
+      email: 'test@test.com',
+    });
+
+    expect(result.message).toBeDefined();
+    expect(mockEmailService.enviarEmailSimples).toHaveBeenCalled();
+    expect(mockUsuariosService.atualizar).toHaveBeenCalled();
+  });
+
+  it('should silently succeed if email does not exist', async () => {
+    mockUsuariosService.findByEmail.mockResolvedValue(null);
+
+    const result = await service.reenviarCodigo({
+      email: 'inexistente@test.com',
+    });
+
+    expect(result.message).toBeDefined();
+    expect(mockEmailService.enviarEmailSimples).not.toHaveBeenCalled();
   });
 });

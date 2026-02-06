@@ -69,4 +69,17 @@ export class UsuariosService {
     });
   }
 
+  async findByEmail(email: string) {
+  return this.usuarioRepository.findOne({
+    where: { email },
+  });
+}
+async atualizar(id: number, dados: Partial<Usuario>) {
+  return this.usuarioRepository.save({
+    id,
+    ...dados,
+  });
+}
+
+
 }

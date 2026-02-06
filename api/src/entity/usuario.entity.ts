@@ -56,4 +56,14 @@ export class Usuario {
   @Column({ type: 'timestamp', nullable: true })
   bloqueadoAte: Date | null;
 
+  @Column({ default: false })
+  emailVerificado: boolean;
+
+  @Column({ nullable: true })
+  codigoVerificacaoEmail: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  codigoExpiraEm: Date;
+
+
 }

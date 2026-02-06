@@ -20,6 +20,7 @@ import { LogsModule } from './logs-usuario/logs.module';
 import { Log } from './entity/log.entity';
 import { Pagamento } from './entity/pagamento.entity';
 import { MetodoPagamentoConfig } from './entity/metodos-pagamento.entity';
+import { EmailModule } from './mail/mail.module';
 
 
 @Module({
@@ -53,6 +54,7 @@ import { MetodoPagamentoConfig } from './entity/metodos-pagamento.entity';
     ProdutosModule,
     PagamentosModule,
     RedisModule,
+    EmailModule,
   ],
 })
 export class AppModule {}
