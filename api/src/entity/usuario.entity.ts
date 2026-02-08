@@ -35,11 +35,8 @@ export class Usuario {
   @Column({ type: 'date', nullable: true })
   dataNascimento?: Date;
 
-  @Column({ type: 'varchar', nullable: true, unique: true })
-  telegramChatId?: string;
-
   @Column(() => Endereco)
-  endereco: Endereco;
+  endereco?: Endereco;
 
   @OneToMany(() => Carrinho, carrinho => carrinho.usuario)
   carrinhos: Carrinho[];

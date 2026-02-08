@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
@@ -23,60 +24,60 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-async validateUser(email: string, senha: string) {
-  const usuario =
-    await this.usuariosService.findByEmailWithPassword(email);
+  async validateUser(email: string, senha: string) {
+    const usuario =
+      await this.usuariosService.findByEmailWithPassword(email);
 
-  if (!usuario) {
-    throw new UnauthorizedException('Usuário não encontrado');
-  }
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
 
-  if (
-    usuario.bloqueadoAte &&
-    usuario.bloqueadoAte > new Date()
-  ) {
-    throw new UnauthorizedException(
-      'Conta bloqueada por excesso de tentativas. Tente mais tarde.',
-    );
-  }
-
-  const senhaValida = await bcrypt.compare(senha, usuario.senha);
-
-  if (!senhaValida) {
-    await this.usuariosService.incrementarTentativa(usuario.id);
-
-    const tentativas = usuario.tentativasLogin + 1;
-
-
-    if (tentativas >= 5) {
-      await this.usuariosService.bloquearUsuario(usuario.id, 15);
-
-      await this.logsService.registrarLog({
-        usuarioId: usuario.id,
-        acao: 'Usuário bloqueado por tentativas de login',
-        detalhes: { email },
-      });
-
+    if (
+      usuario.bloqueadoAte &&
+      usuario.bloqueadoAte > new Date()
+    ) {
       throw new UnauthorizedException(
-        'Conta bloqueada após 5 tentativas inválidas',
+        'Conta bloqueada por excesso de tentativas. Tente mais tarde.',
       );
     }
 
-    throw new UnauthorizedException(
-      `Senha incorreta. Tentativa ${tentativas}/5`,
-    );
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+    if (!senhaValida) {
+      await this.usuariosService.incrementarTentativa(usuario.id);
+
+      const tentativas = usuario.tentativasLogin + 1;
+
+      if (tentativas >= 5) {
+        await this.usuariosService.bloquearUsuario(usuario.id, 15);
+
+        await this.logsService.registrarLog({
+          usuarioId: usuario.id,
+          acao: 'Usuário bloqueado por tentativas de login',
+          detalhes: { email },
+        });
+
+        throw new UnauthorizedException(
+          'Conta bloqueada após 5 tentativas inválidas',
+        );
+      }
+
+      throw new UnauthorizedException(
+        `Senha incorreta. Tentativa ${tentativas}/5`,
+      );
+    }
+
+    if (!usuario.emailVerificado) {
+      throw new UnauthorizedException(
+        'Email não confirmado. Verifique sua caixa de entrada.',
+      );
+    }
+
+    await this.usuariosService.resetarTentativas(usuario.id);
+
+    const { senha: _, ...usuarioSemSenha } = usuario;
+    return usuarioSemSenha;
   }
-  if (!usuario.emailVerificado) {
-  throw new UnauthorizedException(
-    'Email não confirmado. Verifique sua caixa de entrada.',
-  );
-}
-  await this.usuariosService.resetarTentativas(usuario.id);
-
-  const { senha: _, ...usuarioSemSenha } = usuario;
-  return usuarioSemSenha;
-}
-
 
   async login(usuario: any) {
     const payload = {
@@ -97,14 +98,14 @@ async validateUser(email: string, senha: string) {
       access_token: token,
       usuario: {
         id: usuario.id,
-        nomeCompleto: usuario.nomeCompleto,
+        nome: usuario.nome,
         email: usuario.email,
         role: usuario.role,
       },
     };
   }
 
- async register(dto: RegisterDto) {
+  async register(dto: RegisterDto) {
   const existente =
     await this.usuariosService.findByEmailWithPassword(dto.email);
 
@@ -112,8 +113,15 @@ async validateUser(email: string, senha: string) {
     throw new ConflictException('Email já cadastrado');
   }
 
-  const enderecoViaCep =
-    await this.viaCepService.buscarEndereco(dto.cep);
+  if (!dto.cep) {
+    throw new BadRequestException('CEP é obrigatório');
+  }
+
+  const enderecoViaCep = await this.viaCepService.buscarEndereco(dto.cep);
+
+  if (!enderecoViaCep?.cep) {
+    throw new BadRequestException('Endereço não encontrado para o CEP informado');
+  }
 
   const hashSenha = await bcrypt.hash(dto.senha, 10);
 
@@ -121,9 +129,8 @@ async validateUser(email: string, senha: string) {
     ? dto.cpf.replace(/\D/g, '')
     : undefined;
 
-  // 🔐 gera código
   const codigo = this.gerarCodigoVerificacao();
-  const expiraEm = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+  const expiraEm = new Date(Date.now() + 15 * 60 * 1000);
 
   const usuario = await this.usuariosService.create({
     nome: dto.nome,
@@ -136,14 +143,18 @@ async validateUser(email: string, senha: string) {
     emailVerificado: false,
     codigoVerificacaoEmail: codigo,
     codigoExpiraEm: expiraEm,
+
     endereco: {
-      ...enderecoViaCep,
+      cep: enderecoViaCep.cep,
+      rua: enderecoViaCep.rua,
+      bairro: enderecoViaCep.bairro,
+      cidade: enderecoViaCep.cidade,
+      estado: enderecoViaCep.estado,
       numero: dto.numero,
-      complemento: dto.complemento,
+      complemento: dto.complemento ?? undefined,
     },
   });
 
-  // 📧 envia email
   await this.emailService.enviarEmailSimples(
     usuario.email,
     'Confirmação de cadastro',
@@ -161,89 +172,86 @@ async validateUser(email: string, senha: string) {
   };
 }
 
-async confirmarEmail(dto: ConfirmarEmailDto) {
-  const usuario = await this.usuariosService.findByEmail(dto.email);
+  async confirmarEmail(dto: ConfirmarEmailDto) {
+    const usuario = await this.usuariosService.findByEmail(dto.email);
 
-  if (!usuario) {
-    throw new UnauthorizedException('Usuário não encontrado');
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
+
+    if (usuario.emailVerificado) {
+      return { message: 'Email já confirmado' };
+    }
+
+    if (
+      !usuario.codigoVerificacaoEmail ||
+      usuario.codigoVerificacaoEmail !== dto.codigo
+    ) {
+      throw new UnauthorizedException('Código inválido');
+    }
+
+    if (usuario.codigoExpiraEm < new Date()) {
+      throw new UnauthorizedException('Código expirado');
+    }
+
+    await this.usuariosService.atualizar(usuario.id, {
+      emailVerificado: true,
+      codigoVerificacaoEmail: undefined,
+      codigoExpiraEm: undefined,
+    });
+
+    await this.logsService.registrarLog({
+      usuarioId: usuario.id,
+      acao: 'Email confirmado',
+      detalhes: { email: usuario.email },
+    });
+
+    return { message: 'Email confirmado com sucesso' };
   }
 
-  if (usuario.emailVerificado) {
-    return { message: 'Email já confirmado' };
-  }
+  async reenviarCodigo(dto: ReenviarCodigoDto) {
+    const usuario = await this.usuariosService.findByEmail(dto.email);
 
-  if (
-    !usuario.codigoVerificacaoEmail ||
-    usuario.codigoVerificacaoEmail !== dto.codigo
-  ) {
-    throw new UnauthorizedException('Código inválido');
-  }
+    if (!usuario) {
+      return {
+        message:
+          'Se o email estiver cadastrado, um novo código será enviado.',
+      };
+    }
 
-  if (usuario.codigoExpiraEm < new Date()) {
-    throw new UnauthorizedException('Código expirado');
-  }
+    if (usuario.emailVerificado) {
+      return {
+        message: 'Email já confirmado.',
+      };
+    }
 
-  await this.usuariosService.atualizar(usuario.id, {
-    emailVerificado: true,
-    codigoVerificacaoEmail: undefined,
-    codigoExpiraEm: undefined,
-  });
+    const codigo = this.gerarCodigoVerificacao();
+    const expiraEm = new Date(Date.now() + 15 * 60 * 1000);
 
-  await this.logsService.registrarLog({
-    usuarioId: usuario.id,
-    acao: 'Email confirmado',
-    detalhes: { email: usuario.email },
-  });
+    await this.usuariosService.atualizar(usuario.id, {
+      codigoVerificacaoEmail: codigo,
+      codigoExpiraEm: expiraEm,
+    });
 
-  return { message: 'Email confirmado com sucesso' };
-}
+    await this.emailService.enviarEmailSimples(
+      usuario.email,
+      'Novo código de confirmação',
+      `Seu novo código de verificação é: ${codigo}\n\nEste código expira em 15 minutos.`,
+    );
 
+    await this.logsService.registrarLog({
+      usuarioId: usuario.id,
+      acao: 'Reenvio de código de confirmação',
+      detalhes: { email: usuario.email },
+    });
 
-  private gerarCodigoVerificacao(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-async reenviarCodigo(dto: ReenviarCodigoDto) {
-  const usuario = await this.usuariosService.findByEmail(dto.email);
-
-  // segurança: não revelar se existe ou não
-  if (!usuario) {
     return {
       message:
         'Se o email estiver cadastrado, um novo código será enviado.',
     };
   }
 
-  if (usuario.emailVerificado) {
-    return {
-      message: 'Email já confirmado.',
-    };
+  private gerarCodigoVerificacao(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
-
-  const codigo = this.gerarCodigoVerificacao();
-  const expiraEm = new Date(Date.now() + 15 * 60 * 1000);
-
-  await this.usuariosService.atualizar(usuario.id, {
-    codigoVerificacaoEmail: codigo,
-    codigoExpiraEm: expiraEm,
-  });
-
-  await this.emailService.enviarEmailSimples(
-    usuario.email,
-    'Novo código de confirmação',
-    `Seu novo código de verificação é: ${codigo}\n\nEste código expira em 15 minutos.`,
-  );
-
-  await this.logsService.registrarLog({
-    usuarioId: usuario.id,
-    acao: 'Reenvio de código de confirmação',
-    detalhes: { email: usuario.email },
-  });
-
-  return {
-    message:
-      'Se o email estiver cadastrado, um novo código será enviado.',
-  };
-}
-
 }

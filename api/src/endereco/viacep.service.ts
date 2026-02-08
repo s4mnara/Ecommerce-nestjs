@@ -3,8 +3,16 @@ import axios from 'axios';
 
 @Injectable()
 export class ViaCepService {
-  async buscarEndereco(cep: string) {
+  async buscarEndereco(cep?: string) {
+    if (!cep) {
+      return null;
+    }
+
     const cepLimpo = cep.replace(/\D/g, '');
+
+    if (cepLimpo.length !== 8) {
+      throw new BadRequestException('CEP inválido');
+    }
 
     const { data } = await axios.get(
       `https://viacep.com.br/ws/${cepLimpo}/json/`,

@@ -19,10 +19,6 @@ import * as bcrypt from 'bcryptjs';
 describe('AuthService', () => {
   let service: AuthService;
 
-  // ======================
-  // 🔹 Mocks
-  // ======================
-
   const mockUsuariosService = {
     findByEmailWithPassword: jest.fn(),
     findByEmail: jest.fn(),
@@ -77,14 +73,10 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  // =====================================================
-  // 🔐 validateUser
-  // =====================================================
-
   it('should validate user with correct credentials', async () => {
     mockUsuariosService.findByEmailWithPassword.mockResolvedValue({
       id: 1,
-      nomeCompleto: 'Admin',
+      nome: 'Admin',
       email: 'admin@test.com',
       senha: 'hashed',
       role: 'admin',
@@ -144,14 +136,10 @@ describe('AuthService', () => {
     expect(mockLogsService.registrarLog).toHaveBeenCalled();
   });
 
-  // =====================================================
-  // 🔑 login
-  // =====================================================
-
   it('should return access_token and user data on login', async () => {
     const usuario = {
       id: 1,
-      nomeCompleto: 'Samara',
+      nome: 'Samara',
       email: 'samara@test.com',
       role: 'admin',
     };
@@ -163,20 +151,17 @@ describe('AuthService', () => {
     expect(mockJwtService.sign).toHaveBeenCalled();
   });
 
-  // =====================================================
-  // 📝 register
-  // =====================================================
-
   it('should register a new user and send verification email', async () => {
     mockUsuariosService.findByEmailWithPassword.mockResolvedValue(null);
 
     mockUsuariosService.create.mockResolvedValue({
       id: 2,
       email: 'novo@test.com',
+      emailVerificado: false,
     });
 
     const dto = {
-      nomeCompleto: 'Novo Usuário',
+      nome: 'Novo Usuário',
       email: 'novo@test.com',
       senha: '123456',
       telefone: '11999999999',
@@ -206,10 +191,6 @@ describe('AuthService', () => {
       service.register({ email: 'exists@test.com' } as any),
     ).rejects.toBeInstanceOf(ConflictException);
   });
-
-  // =====================================================
-  // ✅ confirmarEmail
-  // =====================================================
 
   it('should confirm email with valid code', async () => {
     mockUsuariosService.findByEmail.mockResolvedValue({
@@ -244,10 +225,6 @@ describe('AuthService', () => {
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
-
-  // =====================================================
-  // 🔁 reenviarCodigo
-  // =====================================================
 
   it('should resend verification code if email exists', async () => {
     mockUsuariosService.findByEmail.mockResolvedValue({
