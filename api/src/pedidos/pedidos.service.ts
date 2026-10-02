@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +16,7 @@ import { LogsService } from '../logs-usuario/logs.service';
 import { PagamentosService } from '../pagamento/pagamentos.service';
 import { ProcessarPagamentoDto } from '../pagamento/dto/processar-pagamento.dto';
 import { Pagamento } from 'src/entity/pagamento.entity';
+import Redis from 'ioredis';
 
 @Injectable()
 export class PedidosService {
@@ -42,6 +44,9 @@ export class PedidosService {
     private pagamentoRepo: Repository<Pagamento>,
 
     private readonly pagamentosService: PagamentosService,
+
+    @Inject('REDIS_CLIENT')
+    private readonly redis: Redis,
   ) {}
 
   // ============================================================
@@ -51,13 +56,53 @@ export class PedidosService {
     usuarioId: number,
     pagamentoDto: ProcessarPagamentoDto,
   ) {
+    if (!pagamentoDto?.metodo) {
+      throw new BadRequestException('Método de pagamento é obrigatório');
+    }
+
     const carrinho = await this.carrinhoRepo.findOne({
       where: { usuario: { id: usuarioId } },
       relations: ['itens', 'itens.produto'],
     });
 
-    if (!carrinho || !carrinho.itens.length) {
+    if (!carrinho || !carrinho.itens?.length) {
       throw new BadRequestException('Carrinho vazio.');
+    }
+
+    const total = carrinho.itens.reduce(
+      (acc, i) => acc + Number(i.subtotal ?? 0),
+      0,
+    );
+
+    if (!Number.isFinite(total) || total <= 0) {
+      throw new BadRequestException('Total do carrinho inválido.');
+    }
+
+    // Processa pagamento ANTES da transação (falhas de validação não abrem TX)
+    let resultadoPagamento;
+    switch (pagamentoDto.metodo) {
+      case 'cartao':
+        if (!pagamentoDto.numeroCartao || !pagamentoDto.parcelas) {
+          throw new BadRequestException('Dados do cartão inválidos');
+        }
+        resultadoPagamento = await this.pagamentosService.pagarComCartao(
+          total,
+          pagamentoDto.parcelas,
+          pagamentoDto.numeroCartao,
+        );
+        break;
+
+      case 'pix':
+        resultadoPagamento = await this.pagamentosService.pagarComPix(total);
+        break;
+
+      case 'boleto':
+        resultadoPagamento =
+          await this.pagamentosService.pagarComBoleto(total);
+        break;
+
+      default:
+        throw new BadRequestException('Método inválido');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -70,40 +115,6 @@ export class PedidosService {
       const pagamentoRepo = queryRunner.manager.getRepository(Pagamento);
       const carrinhoRepo = queryRunner.manager.getRepository(Carrinho);
       const itemCarrinhoRepo = queryRunner.manager.getRepository(ItemCarrinho);
-
-      const total = carrinho.itens.reduce(
-        (acc, i) => acc + Number(i.subtotal),
-        0,
-      );
-
-      let resultadoPagamento;
-
-      switch (pagamentoDto.metodo) {
-        case 'cartao':
-          if (!pagamentoDto.numeroCartao || !pagamentoDto.parcelas) {
-            throw new BadRequestException('Dados do cartão inválidos');
-          }
-          resultadoPagamento =
-            await this.pagamentosService.pagarComCartao(
-              total,
-              pagamentoDto.parcelas,
-              pagamentoDto.numeroCartao,
-            );
-          break;
-
-        case 'pix':
-          resultadoPagamento =
-            await this.pagamentosService.pagarComPix(total);
-          break;
-
-        case 'boleto':
-          resultadoPagamento =
-            await this.pagamentosService.pagarComBoleto(total);
-          break;
-
-        default:
-          throw new BadRequestException('Método inválido');
-      }
 
       const pedido = pedidoRepo.create({
         usuario: { id: usuarioId } as Usuario,
@@ -126,7 +137,7 @@ export class PedidosService {
       }
 
       await pagamentoRepo.save({
-        pedido: pedidoSalvo,
+        pedido: { id: pedidoSalvo.id } as Pedido,
         metodo: resultadoPagamento.metodo,
         status: resultadoPagamento.status,
         valorOriginal: resultadoPagamento.valorOriginal ?? total,
@@ -138,13 +149,19 @@ export class PedidosService {
         transactionId: resultadoPagamento.transacaoId,
       });
 
-      await itemCarrinhoRepo.delete(carrinho.itens.map(i => i.id));
+      const itemIds = carrinho.itens.map((i) => i.id).filter(Boolean);
+      if (itemIds.length) {
+        await itemCarrinhoRepo.delete(itemIds);
+      }
 
       carrinho.itens = [];
       carrinho.total = 0;
       await carrinhoRepo.save(carrinho);
 
       await queryRunner.commitTransaction();
+
+      // Invalida cache do carrinho (DB já foi limpo na TX)
+      await this.redis.del(`carrinho:${usuarioId}`);
 
       return {
         pedidoId: pedidoSalvo.id,
@@ -196,10 +213,52 @@ export class PedidosService {
   }
 
   async findByUsuarioId(usuarioId: number) {
-    return this.pedidoRepo.find({
+    const pedidos = await this.pedidoRepo.find({
       where: { usuario: { id: usuarioId } },
-      relations: ['itens', 'itens.produto'],
+      relations: ['itens', 'itens.produto', 'pagamentos'],
       order: { id: 'DESC' },
+    });
+
+    // Evita referência circular Pedido <-> Pagamento na serialização JSON
+    return pedidos.map((pedido) => {
+      const { usuario, pagamentos, itens, ...rest } = pedido;
+      return {
+        ...rest,
+        usuario: usuario
+          ? {
+              id: usuario.id,
+              nome: usuario.nome,
+              email: usuario.email,
+              role: usuario.role,
+            }
+          : undefined,
+        itens: (itens || []).map((item) => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          subtotal: item.subtotal,
+          produto: item.produto
+            ? {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                preco: item.produto.preco,
+                imagem: item.produto.imagem,
+              }
+            : null,
+        })),
+        pagamentos: (pagamentos || []).map((p) => ({
+          id: p.id,
+          metodo: p.metodo,
+          status: p.status,
+          valorOriginal: p.valorOriginal,
+          valorFinal: p.valorFinal,
+          parcelas: p.parcelas,
+          bandeira: p.bandeira,
+          codigoPix: p.codigoPix,
+          linhaDigitavelBoleto: p.linhaDigitavelBoleto,
+          transactionId: p.transactionId,
+          criadoEm: p.criadoEm,
+        })),
+      };
     });
   }
 

@@ -9,11 +9,15 @@ import { ReenviarCodigoDto } from './dto/reenviar-codigo.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-@Post('cliente/register')
-@Post('register')
-async register(@Body() dto: RegisterDto) {
-  return this.authService.register(dto);
-}
+  @Post('cliente/register')
+  async registerCliente(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post('register')
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
 
   @Post('login')
   async login(@Body() body: LoginDto) {
@@ -25,16 +29,13 @@ async register(@Body() dto: RegisterDto) {
     return this.authService.login(usuario);
   }
 
-    @Post('confirmar-email')
+  @Post('confirmar-email')
   confirmarEmail(@Body() dto: ConfirmarEmailDto) {
     return this.authService.confirmarEmail(dto);
   }
 
   @Post('reenviar-codigo')
-reenviarCodigo(@Body() dto: ReenviarCodigoDto) {
-  return this.authService.reenviarCodigo(dto);
+  reenviarCodigo(@Body() dto: ReenviarCodigoDto) {
+    return this.authService.reenviarCodigo(dto);
+  }
 }
-
-
-}
-

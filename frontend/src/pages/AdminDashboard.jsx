@@ -5,7 +5,17 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // ✅ CORRETO (usa variável de ambiente)
-const BASE_IMAGE_URL = `${process.env.REACT_APP_API_URL}/uploads/`;
+const getProductImageUrl = (imagem) => {
+  if (!imagem) return null;
+  if (
+    imagem.startsWith("http://") ||
+    imagem.startsWith("https://") ||
+    imagem.startsWith("/")
+  ) {
+    return imagem;
+  }
+  return `${process.env.REACT_APP_API_URL || ""}/uploads/${imagem}`;
+};
 
 const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
   <div className="produto-form-panel" style={{ marginTop: '20px' }}>
@@ -29,7 +39,7 @@ const InventoryTable = ({ produtos, editarProduto, removerProduto }) => (
             <td style={{ textAlign: 'center' }}>
               {p.imagem && (
                 <img
-                  src={`${BASE_IMAGE_URL}${p.imagem}`}
+                  src={`${getProductImageUrl(p.imagem)}`}
                   alt={p.nome}
                   className="produto-imagem-tabela"
                   style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "5px" }}

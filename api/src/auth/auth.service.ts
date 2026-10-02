@@ -106,71 +106,89 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-  const existente =
-    await this.usuariosService.findByEmailWithPassword(dto.email);
+    const existente =
+      await this.usuariosService.findByEmailWithPassword(dto.email);
 
-  if (existente) {
-    throw new ConflictException('Email já cadastrado');
+    if (existente) {
+      throw new ConflictException('Email já cadastrado');
+    }
+
+    // Endereço é opcional no cadastro; se CEP for enviado, resolve ViaCEP
+    let endereco;
+    if (dto.cep) {
+      if (!dto.numero) {
+        throw new BadRequestException(
+          'Número é obrigatório quando o CEP é informado',
+        );
+      }
+
+      const enderecoViaCep = await this.viaCepService.buscarEndereco(dto.cep);
+
+      if (!enderecoViaCep?.cep) {
+        throw new BadRequestException(
+          'Endereço não encontrado para o CEP informado',
+        );
+      }
+
+      endereco = {
+        cep: enderecoViaCep.cep,
+        rua: enderecoViaCep.rua,
+        bairro: enderecoViaCep.bairro,
+        cidade: enderecoViaCep.cidade,
+        estado: enderecoViaCep.estado,
+        numero: dto.numero,
+        complemento: dto.complemento ?? undefined,
+      };
+    }
+
+    const hashSenha = await bcrypt.hash(dto.senha, 10);
+
+    const cpfNormalizado = dto.cpf
+      ? dto.cpf.replace(/\D/g, '')
+      : undefined;
+
+    const codigo = this.gerarCodigoVerificacao();
+    const expiraEm = new Date(Date.now() + 15 * 60 * 1000);
+
+    const usuario = await this.usuariosService.create({
+      nome: dto.nome,
+      email: dto.email,
+      senha: hashSenha,
+      telefone: dto.telefone,
+      cpf: cpfNormalizado,
+      dataNascimento: dto.dataNascimento,
+      role: 'cliente',
+      emailVerificado: false,
+      codigoVerificacaoEmail: codigo,
+      codigoExpiraEm: expiraEm,
+      ...(endereco ? { endereco } : {}),
+    });
+
+    try {
+      await this.emailService.enviarEmailSimples(
+        usuario.email,
+        'Confirmação de cadastro',
+        `Seu código de verificação é: ${codigo}\n\nEste código expira em 15 minutos.`,
+      );
+    } catch (error) {
+      // Cadastro já persistido — não retornar 500 por falha de SMTP
+      console.error(
+        `[AuthService] Falha ao enviar email de verificação para ${usuario.email}. Código: ${codigo}`,
+        error,
+      );
+    }
+
+    await this.logsService.registrarLog({
+      usuarioId: usuario.id,
+      acao: 'Registro de usuário',
+      detalhes: { email: dto.email },
+    });
+
+    return {
+      message: 'Usuário cadastrado. Verifique seu email para confirmar.',
+      email: usuario.email,
+    };
   }
-
-  if (!dto.cep) {
-    throw new BadRequestException('CEP é obrigatório');
-  }
-
-  const enderecoViaCep = await this.viaCepService.buscarEndereco(dto.cep);
-
-  if (!enderecoViaCep?.cep) {
-    throw new BadRequestException('Endereço não encontrado para o CEP informado');
-  }
-
-  const hashSenha = await bcrypt.hash(dto.senha, 10);
-
-  const cpfNormalizado = dto.cpf
-    ? dto.cpf.replace(/\D/g, '')
-    : undefined;
-
-  const codigo = this.gerarCodigoVerificacao();
-  const expiraEm = new Date(Date.now() + 15 * 60 * 1000);
-
-  const usuario = await this.usuariosService.create({
-    nome: dto.nome,
-    email: dto.email,
-    senha: hashSenha,
-    telefone: dto.telefone,
-    cpf: cpfNormalizado,
-    dataNascimento: dto.dataNascimento,
-    role: 'cliente',
-    emailVerificado: false,
-    codigoVerificacaoEmail: codigo,
-    codigoExpiraEm: expiraEm,
-
-    endereco: {
-      cep: enderecoViaCep.cep,
-      rua: enderecoViaCep.rua,
-      bairro: enderecoViaCep.bairro,
-      cidade: enderecoViaCep.cidade,
-      estado: enderecoViaCep.estado,
-      numero: dto.numero,
-      complemento: dto.complemento ?? undefined,
-    },
-  });
-
-  await this.emailService.enviarEmailSimples(
-    usuario.email,
-    'Confirmação de cadastro',
-    `Seu código de verificação é: ${codigo}\n\nEste código expira em 15 minutos.`,
-  );
-
-  await this.logsService.registrarLog({
-    usuarioId: usuario.id,
-    acao: 'Registro de usuário',
-    detalhes: { email: dto.email },
-  });
-
-  return {
-    message: 'Usuário cadastrado. Verifique seu email para confirmar.',
-  };
-}
 
   async confirmarEmail(dto: ConfirmarEmailDto) {
     const usuario = await this.usuariosService.findByEmail(dto.email);

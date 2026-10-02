@@ -13,16 +13,19 @@ export class EmailService {
     mensagem: string,
   ) {
     try {
-      await this.mailerService.sendMail({
+      const info = await this.mailerService.sendMail({
         to: para,
         subject: assunto,
         text: mensagem,
       });
 
-      this.logger.log(`📧 Email enviado para ${para}`);
+      this.logger.log(`Email enviado/simulado para ${para}`);
+      if (info?.message) {
+        this.logger.debug(`Conteúdo (jsonTransport): ${info.message}`);
+      }
     } catch (error) {
-      this.logger.error('Erro ao enviar email', error);
-      throw error;
+      // Não derruba o fluxo de cadastro se SMTP estiver indisponível
+      this.logger.error('Erro ao enviar email (ignorado)', error);
     }
   }
 }

@@ -5,50 +5,308 @@
 }
 
 :root {
-    --color-primary: #000000;
+    --color-primary: #0a0a0a;
     --color-secondary: #FFC107;
-    --color-background-light: #2c2c2c;
-    --color-background-dark: #1f1f1f;
+    --color-background-light: #1a1a1a;
+    --color-background-dark: #111111;
     --color-white: #ffffff;
-    --color-gray-border: #444444;
-    --color-accent-yellow: #FFB300;
+    --color-gray-border: #333333;
+    --color-accent-yellow: #FFD54F;
+    --color-muted: #a3a3a3;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --shadow-card: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 193, 7, 0.12);
+    --font-sans: "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
 }
 
 html, body, #root {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    overflow-y: scroll; 
-    overflow-x: hidden; 
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+}
+
+html {
+    overflow-y: auto !important;
+    height: auto;
+    background-color: #0a0a0a;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #FFC107 #0a0a0a;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    width: 12px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+    background: #0a0a0a;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+    background: #FFC107;
+    border-radius: 999px;
+    border: 2px solid #0a0a0a;
 }
 
 body {
     position: relative;
     min-height: 100vh;
-    background-image:url('../public/assets/background.jpeg'); 
+    height: auto;
+    width: 100%;
+    margin: 0;
+    background-color: #0a0a0a;
+    background-image: url('./assets/background.jpeg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    color: var(--color-white); 
+    color: var(--color-white);
     overflow-x: hidden;
+    overflow-y: auto !important;
 }
 
 body::before {
     content: "";
-    position: absolute;
+    position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: -1;
+    background: linear-gradient(
+        145deg,
+        rgba(255, 235, 59, 0.42) 0%,
+        rgba(255, 193, 7, 0.38) 45%,
+        rgba(255, 213, 79, 0.40) 100%
+    );
+    /* Must be >= 0 so overlay sits above body bg and is not
+       painted under html's solid #0a0a0a (which hid the yellow). */
+    z-index: 0;
+    pointer-events: none;
+}
+
+#root {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* ================================
+   AUTH PAGES (premium yellow/black)
+   ================================ */
+.auth-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 36px 32px 28px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(165deg, rgba(28, 28, 28, 0.95) 0%, rgba(12, 12, 12, 0.98) 100%);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 193, 7, 0.18);
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #000 0%, var(--color-secondary) 50%, #000 100%);
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 193, 7, 0.25);
+}
+
+.auth-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.35));
+}
+
+.auth-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.auth-brand-name {
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--color-secondary);
+    text-transform: uppercase;
+}
+
+.auth-brand-sub {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.auth-heading {
+    margin-bottom: 22px;
+}
+
+.auth-heading h1 {
+    margin: 0 0 6px;
+    text-align: left;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-white);
+}
+
+.auth-heading p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-field span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+}
+
+.auth-field input {
+    padding: 13px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-gray-border);
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--color-white);
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-field input:focus {
+    outline: none;
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
+    animation: none;
+}
+
+.auth-hint {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    line-height: 1.4;
+}
+
+.auth-submit {
+    margin-top: 8px;
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #FFC107 0%, #FFB300 100%);
+    color: #111;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+    box-shadow: 0 8px 24px rgba(255, 193, 7, 0.28);
+}
+
+.auth-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 12px 28px rgba(255, 193, 7, 0.38);
+}
+
+.auth-submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 22px;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+}
+
+/* Legacy .container still used by dashboards — keep premium look */
+.container {
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 193, 7, 0.12);
+    box-shadow: var(--shadow-card);
+}
+
+.dashboard-header {
+    border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.button {
+    border-radius: var(--radius-md);
+}
+
+.produto-card {
+    border: 1px solid rgba(255, 193, 7, 0.12) !important;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.produto-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 193, 7, 0.4) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
 }
 
 .app-wrapper {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: stretch;
+}
+
+.app-wrapper > .auth-page,
+.app-wrapper > .admin-dashboard,
+.app-wrapper > .client-dashboard,
+.app-wrapper > .dashboard-body-container,
+.app-wrapper > .dashboard-body-container-client {
+    width: 100%;
+}
+
+/* Auth pages stay centered via .auth-page flex */
+.app-wrapper:has(.auth-page) {
     align-items: center;
 }
 
@@ -71,8 +329,9 @@ body::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.3); 
+    background: transparent;
     z-index: 0;
+    pointer-events: none;
 }
 
 .container * {
@@ -377,12 +636,13 @@ input:focus, select:focus {
 .dashboard-body-container-client {
     display: flex;
     flex: 1;
-    padding: 20px;
+    padding: 80px 20px 40px 20px;
     gap: 20px;
     max-width: 1600px;
     width: 100%;
     margin: 0 auto;
     align-items: flex-start;
+    overflow: visible !important;
 }
 
 
@@ -433,7 +693,7 @@ input:focus, select:focus {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    overflow-y: auto;
+    overflow: visible;
 }
 
 .main-content-full {
@@ -942,8 +1202,182 @@ input:focus, select:focus {
 /* ================================
    GARANTE QUE O DASHBOARD TENHA SCROLL
    ================================ */
-.dashboard-body-container,
-.dashboard-body-container-client {
+.dashboard-body-container {
     overflow-y: auto !important;
     overflow-x: hidden;
+}
+
+.dashboard-body-container-client {
+    overflow: visible !important;
+}
+
+.client-dashboard-layout {
+    width: 100%;
+    min-height: 100vh;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    overflow: visible;
+}
+
+.app-wrapper > .client-dashboard-layout {
+    width: 100%;
+}
+
+
+/* ================================
+   CLIENT: Max Titanium-style carousel
+   (4 products centered + arrow buttons)
+   ================================ */
+.client-dashboard-layout .produtos-section {
+    width: 100%;
+    overflow: visible;
+}
+
+.client-dashboard-layout .produtos-section h3 {
+    text-align: center;
+    padding-left: 0;
+}
+
+.products-carousel-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 1280px;
+    margin: 15px auto 0 auto;
+    padding: 16px 8px 24px;
+    box-sizing: border-box;
+    background-color: var(--color-background-light);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 193, 7, 0.15);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+
+.products-carousel-viewport {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.products-carousel-track {
+    display: flex;
+    transition: transform 0.35s ease;
+    will-change: transform;
+}
+
+.carousel-slide {
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding: 8px;
+    box-sizing: border-box;
+    display: flex;
+}
+
+.carousel-slide .produto-card {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100%;
+    flex: 1;
+    text-align: center;
+    scroll-snap-align: unset;
+}
+
+.carousel-slide .produto-card h3 {
+    text-align: center;
+    min-height: 2.4em;
+}
+
+.carousel-slide .produto-descricao {
+    text-align: center;
+    font-size: 0.9em;
+    color: #ccc;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.carousel-slide .produto-imagem,
+.carousel-slide .produto-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+.carousel-arrow {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--color-secondary);
+    background: #111111;
+    color: var(--color-secondary);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s, transform 0.15s, opacity 0.2s;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.carousel-arrow:hover:not(:disabled) {
+    background: var(--color-secondary);
+    color: #111;
+    transform: scale(1.06);
+}
+
+.carousel-arrow:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.produto-imagem-placeholder {
+    width: 100%;
+    height: 180px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    border: 1px dashed var(--color-secondary);
+    color: var(--color-secondary);
+    font-size: 0.85em;
+}
+
+.no-products-message {
+    text-align: center;
+    color: #aaa;
+    padding: 40px 20px;
+}
+
+@media (max-width: 900px) {
+    /* Keep 4-slot track math; shrink padding/arrows on smaller screens */
+    .carousel-arrow {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    .products-carousel-shell {
+        gap: 6px;
+        padding: 12px 4px 16px;
+    }
+    .carousel-slide .produto-descricao {
+        -webkit-line-clamp: 2;
+        font-size: 0.8em;
+    }
+    .carousel-slide .produto-imagem,
+    .carousel-slide .produto-card img {
+        height: 140px;
+        padding: 4px;
+    }
 }

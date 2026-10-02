@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { PedidosService } from './pedidos.service';
 import { ProcessarPagamentoDto } from '../pagamento/dto/processar-pagamento.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -9,18 +19,16 @@ import { Roles } from '../auth/decorators/roles.decorator';
 export class PedidosController {
   constructor(private readonly pedidosService: PedidosService) {}
 
+  // Rotas estáticas ANTES de :usuarioId / :id para não serem engolidas
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('cliente')
-  @Post(':usuarioId')
-    criarPedido(
-      @Param('usuarioId', ParseIntPipe) usuarioId: number,
-      @Body() pagamentoDto: ProcessarPagamentoDto,
-    ) {
-      return this.pedidosService.criarPedidoAPartirDoCarrinho(
-        usuarioId,
-        pagamentoDto,
-      );
-    }
+  @Roles('cliente', 'admin')
+  @Post('checkout/:usuarioId')
+  checkout(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Body() dto: ProcessarPagamentoDto,
+  ) {
+    return this.pedidosService.criarPedidoAPartirDoCarrinho(usuarioId, dto);
+  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('cliente', 'admin')
@@ -28,7 +36,20 @@ export class PedidosController {
   findByUsuarioId(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
     return this.pedidosService.findByUsuarioId(usuarioId);
   }
-  
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('cliente')
+  @Post(':usuarioId')
+  criarPedido(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Body() pagamentoDto: ProcessarPagamentoDto,
+  ) {
+    return this.pedidosService.criarPedidoAPartirDoCarrinho(
+      usuarioId,
+      pagamentoDto,
+    );
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('cliente', 'admin')
   @Get()
@@ -38,14 +59,6 @@ export class PedidosController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('cliente', 'admin')
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.pedidosService.findOne(id);
-  }
-
-  // Atualiza status manualmente (ex: finalizar pedido pendente)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('cliente', 'admin')
   @Put(':id/finalizar')
   finalizarPedido(@Param('id', ParseIntPipe) id: number) {
     return this.pedidosService.atualizarStatusPedido(id, 'finalizado');
@@ -53,18 +66,15 @@ export class PedidosController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('cliente', 'admin')
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.pedidosService.remove(id);
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.pedidosService.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('cliente', 'admin')
-  @Post('checkout/:usuarioId')
-  checkout(
-    @Param('usuarioId', ParseIntPipe) usuarioId: number,
-    @Body() dto: ProcessarPagamentoDto,
-  ) {
-    return this.pedidosService.criarPedidoAPartirDoCarrinho(usuarioId, dto);
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.pedidosService.remove(id);
   }
 }

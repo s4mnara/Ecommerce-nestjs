@@ -12,6 +12,7 @@ import { CarrinhoModule } from '../carrinho/carrinho.module';
 import { LogsModule } from 'src/logs-usuario/logs.module';
 import { Pagamento } from 'src/entity/pagamento.entity';
 import { PagamentosModule } from 'src/pagamento/pagamentos.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 
 @Module({
@@ -20,6 +21,7 @@ import { PagamentosModule } from 'src/pagamento/pagamentos.module';
     CarrinhoModule,
     LogsModule,
     PagamentosModule,
+    RedisModule,
   ],
   controllers: [PedidosController],
   providers: [PedidosService],

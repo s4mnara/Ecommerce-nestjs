@@ -1,10 +1,19 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+    }),
+  );
 
   app.enableCors({
     origin: true,
@@ -19,11 +28,9 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
 
-  // 🔥 ESSENCIAL EM DOCKER
   await app.listen(port, '0.0.0.0');
 
-  console.log(`🚀 API rodando na porta ${port}`);
-  console.log(`📂 Servindo imagens em: http://localhost:${port}/uploads/`);
+  console.log(`API rodando na porta ${port}`);
+  console.log(`Servindo imagens em: http://localhost:${port}/uploads/`);
 }
 bootstrap();
-

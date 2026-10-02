@@ -175,6 +175,7 @@ describe('AuthService', () => {
 
     expect(result).toEqual({
       message: expect.any(String),
+      email: 'novo@test.com',
     });
 
     expect(mockEmailService.enviarEmailSimples).toHaveBeenCalled();

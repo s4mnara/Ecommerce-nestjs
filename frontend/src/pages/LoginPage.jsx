@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import { toast } from "react-toastify"; 
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
@@ -23,64 +23,83 @@ function LoginPage({ onLoginSuccess }) {
 
       onLoginSuccess(access_token);
       toast.success(`Bem-vindo(a), ${usuario.nome.split(" ")[0]}!`);
-      setLoading(false);
 
       if (usuario.role === "admin") navigate("/dashboard");
       else navigate("/client");
     } catch (error) {
+      const raw = error.response?.data?.message;
+      const msg = Array.isArray(raw)
+        ? raw.join(", ")
+        : raw || "Erro no login. Tente novamente.";
+      toast.error(msg);
+    } finally {
       setLoading(false);
-      const msg = error.response?.data?.message || "Erro no login. Tente novamente.";
-      toast.error(msg); // exibe erro com toast
     }
   };
 
   return (
-    <div className="container">
-      <div className="login-header-group">
-        <img src="/assets/logoamarela.png" alt="Logo" style={{ width: "120px" }} />
-        <h2 className="store-name">PowerFit Suplementos</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-brand">
+          <img
+            src="/assets/logoamarela.png"
+            alt="PowerFit"
+            className="auth-logo"
+          />
+          <div className="auth-brand-text">
+            <span className="auth-brand-name">PowerFit</span>
+            <span className="auth-brand-sub">Suplementos</span>
+          </div>
+        </div>
+
+        <div className="auth-heading">
+          <h1>Entrar</h1>
+          <p>Acesse sua conta e continue treinando.</p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-field">
+            <span>E-mail</span>
+            <input
+              type="email"
+              placeholder="voce@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="auth-field">
+            <span>Senha</span>
+            <input
+              type="password"
+              placeholder="Sua senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </label>
+
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+
+        <p className="auth-footer">
+          Não tem conta?{" "}
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => navigate("/register")}
+          >
+            Criar conta
+          </button>
+        </p>
       </div>
-
-      <div className="form-header">
-        <h1>Login</h1>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit(e);
-        }}
-      >
-        <input
-          type="email"
-          placeholder="E-mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          required
-        />
-        <button className="button" type="submit" disabled={loading}>
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-
-      <p style={{ textAlign: "center", marginTop: "15px" }}>
-        Não tem conta?{" "}
-  <button type="button" className="link-button" onClick={() => navigate("/register")}>
-  Criar conta
-</button>
-
-
-      </p>
     </div>
   );
 }
 
 export default LoginPage;
-

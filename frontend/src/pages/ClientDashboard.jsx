@@ -1,5 +1,5 @@
 // src/pages/ClientDashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import apiAuth from "../api"; // Axios com token já configurado
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -19,11 +19,27 @@ const getClientName = () => {
   return "Cliente";
 };
 
+/** Resolve product image: absolute URL, public path (/assets/...), or API upload filename */
+const getProductImageUrl = (imagem) => {
+  if (!imagem) return null;
+  if (
+    imagem.startsWith("http://") ||
+    imagem.startsWith("https://") ||
+    imagem.startsWith("/")
+  ) {
+    return imagem;
+  }
+  const base = process.env.REACT_APP_API_URL || "";
+  return `${base}/uploads/${imagem}`;
+};
+
 function ClientDashboard({ onLogout }) {
   // ======== ESTADOS ========
   const [produtos, setProdutos] = useState([]);
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [search, setSearch] = useState("");
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselTrackRef = useRef(null);
 
   const [carrinho, setCarrinho] = useState([]);
   const [loadingCarrinho, setLoadingCarrinho] = useState(false);
@@ -182,20 +198,36 @@ function ClientDashboard({ onLogout }) {
   // };
 
   const finalizarPedido = async () => {
+    if (!userId) return toast.error("Usuário não autenticado.");
     if (carrinho.length === 0) {
       return toast.warn("Carrinho vazio.");
     }
 
     try {
-      const res = await apiAuth.post("/pedidos/finalizar");
+      const total = Number(
+        carrinho.reduce((acc, item) => {
+          const line =
+            item.subtotal != null
+              ? Number(item.subtotal)
+              : Number(item.preco || 0) * Number(item.quantidade || 0);
+          return acc + (Number.isFinite(line) ? line : 0);
+        }, 0),
+      );
+
+      await apiAuth.post(`/pedidos/checkout/${userId}`, {
+        metodo: "pix",
+        valor: total,
+      });
 
       toast.success("Pedido finalizado com sucesso!");
       carregarCarrinho();
       carregarPedidos();
       setShowCart(false);
-
     } catch (err) {
-      const msg = err.response?.data?.message || "Erro ao finalizar pedido.";
+      const raw = err.response?.data?.message;
+      const msg = Array.isArray(raw)
+        ? raw.join(", ")
+        : raw || "Erro ao finalizar pedido.";
       toast.error(msg);
     }
   };
@@ -220,6 +252,28 @@ function ClientDashboard({ onLogout }) {
       p.descricao?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const VISIBLE = 4;
+  const maxCarouselIndex = Math.max(0, produtosFiltrados.length - VISIBLE);
+
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [search, produtos.length]);
+
+  useEffect(() => {
+    if (carouselIndex > maxCarouselIndex) {
+      setCarouselIndex(maxCarouselIndex);
+    }
+  }, [carouselIndex, maxCarouselIndex]);
+
+  const scrollCarousel = (dir) => {
+    setCarouselIndex((prev) => {
+      const next = prev + dir;
+      if (next < 0) return 0;
+      if (next > maxCarouselIndex) return maxCarouselIndex;
+      return next;
+    });
+  };
+
   const totalCarrinho = carrinho
     .reduce((acc, item) => item.preco && item.quantidade ? acc + item.preco * item.quantidade : acc, 0)
     .toFixed(2);
@@ -227,17 +281,24 @@ function ClientDashboard({ onLogout }) {
   const countCarrinho = carrinho.reduce((acc, item) => item.quantidade ? acc + item.quantidade : acc, 0);
 
   // ======== COMPONENTES INTERNOS ========
-  const ProdutoCard = ({ p }) => (
-    <div key={p.id} className="produto-card">
-      {p.imagem && <img src={`${process.env.REACT_APP_API_URL}/uploads/${p.imagem}`} alt={p.nome} className="produto-imagem" />}
-      <h3>{p.nome}</h3>
-      <p className="produto-descricao">{p.descricao}</p>
-      <p className="produto-preco">R$ {parseFloat(p.preco).toFixed(2)}</p>
-      <button className="button add-button submit-button small-button" onClick={() => handleAddToCart(p)}>
-        + Carrinho
-      </button>
-    </div>
-  );
+  const ProdutoCard = ({ p }) => {
+    const imgSrc = getProductImageUrl(p.imagem);
+    return (
+      <div key={p.id} className="produto-card">
+        {imgSrc ? (
+          <img src={imgSrc} alt={p.nome} className="produto-imagem" />
+        ) : (
+          <div className="produto-imagem-placeholder" aria-hidden="true">Sem imagem</div>
+        )}
+        <h3>{p.nome}</h3>
+        <p className="produto-descricao">{p.descricao}</p>
+        <p className="produto-preco">R$ {parseFloat(p.preco).toFixed(2)}</p>
+        <button className="button add-button submit-button small-button" onClick={() => handleAddToCart(p)}>
+          + Carrinho
+        </button>
+      </div>
+    );
+  };
 
   const CarrinhoPanel = () => (
     <div className="cart-container side-panel clients-section side-panel-fixed">
@@ -324,16 +385,51 @@ function ClientDashboard({ onLogout }) {
         <div className={`produtos-section-wrapper ${activePanel ? 'space-for-panel' : ''}`}>
           <div className="produtos-section">
             <h3>Produtos Disponíveis {loadingProdutos && "(Carregando...)"}</h3>
-            <div className="produtos-carousel client-carousel">
-              {produtosFiltrados.map(p => <ProdutoCard key={p.id} p={p} />)}
-              {produtosFiltrados.length === 0 && <p className="no-products-message">Nenhum produto encontrado.</p>}
-            </div>
+            {produtosFiltrados.length === 0 ? (
+              <p className="no-products-message">Nenhum produto encontrado.</p>
+            ) : (
+              <div className="products-carousel-shell">
+                <button
+                  type="button"
+                  className="carousel-arrow carousel-arrow-left"
+                  onClick={() => scrollCarousel(-1)}
+                  disabled={carouselIndex <= 0}
+                  aria-label="Produtos anteriores"
+                >
+                  ‹
+                </button>
+                <div className="products-carousel-viewport">
+                  <div
+                    className="products-carousel-track"
+                    ref={carouselTrackRef}
+                    style={{
+                      transform: `translateX(calc(-${carouselIndex} * (100% / ${VISIBLE})))`,
+                    }}
+                  >
+                    {produtosFiltrados.map((p) => (
+                      <div className="carousel-slide" key={p.id}>
+                        <ProdutoCard p={p} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="carousel-arrow carousel-arrow-right"
+                  onClick={() => scrollCarousel(1)}
+                  disabled={carouselIndex >= maxCarouselIndex}
+                  aria-label="Próximos produtos"
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {activePanel}
       </div>
 
-      <footer className="-footer client-footer">
+      <footer className="dashboard-footer client-footer">
         <button onClick={onLogout} className="button footer-button logout-mobile">Logout</button>
       </footer>
     </div>

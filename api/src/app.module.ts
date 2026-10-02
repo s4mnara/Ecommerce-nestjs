@@ -21,6 +21,7 @@ import { Log } from './entity/log.entity';
 import { Pagamento } from './entity/pagamento.entity';
 import { MetodoPagamentoConfig } from './entity/metodos-pagamento.entity';
 import { EmailModule } from './mail/mail.module';
+import { SeedModule } from './seed/seed.module';
 
 
 @Module({
@@ -55,6 +56,7 @@ import { EmailModule } from './mail/mail.module';
     PagamentosModule,
     RedisModule,
     EmailModule,
+    SeedModule,
   ],
 })
 export class AppModule {}

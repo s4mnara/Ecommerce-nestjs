@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
-import { JwtModule, JwtModuleOptions } from '@nestjs/jwt'; 
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { LogsModule } from 'src/logs-usuario/logs.module';
-import { EnderecoModule } from 'src/endereco/enderco.module';
-import { EmailModule } from 'src/mail/mail.module';
+import { LogsModule } from '../logs-usuario/logs.module';
+import { EnderecoModule } from '../endereco/endereco.module';
+import { EmailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -16,26 +17,25 @@ import { EmailModule } from 'src/mail/mail.module';
     LogsModule,
     EmailModule,
     EnderecoModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
-      imports: [ConfigModule,
-        EnderecoModule
-      ],
+      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const secret = configService.getOrThrow<string>('JWT_SECRET');
         const expiresIn = configService.getOrThrow<string>('JWT_EXPIRES_IN');
 
         return {
-          secret: secret,
+          secret,
           signOptions: {
-            expiresIn: expiresIn,
+            expiresIn,
           },
-        } as JwtModuleOptions; 
+        } as JwtModuleOptions;
       },
       inject: [ConfigService],
     }),
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, PassportModule, JwtModule],
 })
 export class AuthModule {}

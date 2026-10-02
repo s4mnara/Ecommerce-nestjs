@@ -9,20 +9,31 @@ import { EmailService } from './mail.service';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: {
-          host: config.get('SMTP_HOST'),
-          port: config.get<number>('SMTP_PORT'),
-          secure: false, // true se for 465
-          auth: {
-            user: config.get('SMTP_USER'),
-            pass: config.get('SMTP_PASS'),
+      useFactory: (config: ConfigService) => {
+        const host = config.get<string>('SMTP_HOST');
+        const from = config.get<string>('SMTP_FROM') || 'noreply@localhost';
+
+        // Sem SMTP configurado: não tentar localhost:587 (quebra register no Docker)
+        if (!host || !host.trim()) {
+          return {
+            transport: { jsonTransport: true },
+            defaults: { from },
+          };
+        }
+
+        return {
+          transport: {
+            host,
+            port: Number(config.get('SMTP_PORT') || 587),
+            secure: false,
+            auth: {
+              user: config.get('SMTP_USER'),
+              pass: config.get('SMTP_PASS'),
+            },
           },
-        },
-        defaults: {
-          from: config.get('SMTP_FROM'),
-        },
-      }),
+          defaults: { from },
+        };
+      },
     }),
   ],
   providers: [EmailService],

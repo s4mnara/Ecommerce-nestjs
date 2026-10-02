@@ -1,9 +1,13 @@
 import React from 'react';
-import '../styles/button.css';
 
-export default function Button({ children, onClick }) {
+export default function Button({ children, onClick, type = 'button', className = '', disabled }) {
   return (
-    <button className="button" onClick={onClick}>
+    <button
+      type={type}
+      className={`button ${className}`.trim()}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );

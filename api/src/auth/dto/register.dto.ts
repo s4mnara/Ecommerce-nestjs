@@ -1,14 +1,14 @@
-import { IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, ValidateIf } from 'class-validator';
 import { IsCPF } from '../../common/validators/cpf.validator';
 
 export class RegisterDto {
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Nome é obrigatório' })
   nome: string;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'Email inválido' })
   email: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Senha é obrigatória' })
   senha: string;
 
   @IsOptional()
@@ -21,12 +21,13 @@ export class RegisterDto {
   @IsOptional()
   dataNascimento?: Date;
 
-  // ViaCEP
-  @IsNotEmpty()
-  cep: string;
+  // Endereço opcional no cadastro — pode ser preenchido depois (perfil/checkout)
+  @IsOptional()
+  cep?: string;
 
-  @IsNotEmpty()
-  numero: string;
+  @ValidateIf((o) => !!o.cep)
+  @IsNotEmpty({ message: 'Número é obrigatório quando o CEP é informado' })
+  numero?: string;
 
   @IsOptional()
   complemento?: string;

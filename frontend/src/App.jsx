@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -31,35 +31,36 @@ function App() {
   return (
     <Router>
       <div className="app-wrapper">
-        {/* ToastContainer global */}
         <ToastContainer
           position="top-right"
           autoClose={3000}
           hideProgressBar={false}
-          newestOnTop={false}
+          newestOnTop
           closeOnClick
           pauseOnHover
           draggable
-          theme="colored"
+          theme="dark"
+          toastStyle={{
+            background: "#1a1a1a",
+            border: "1px solid rgba(255,193,7,0.35)",
+            color: "#fff",
+          }}
         />
 
         <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route
             path="/login"
             element={<LoginPage onLoginSuccess={handleLogin} />}
           />
-          <Route
-            path="/register"
-            element={<RegisterPage onRegistrationSuccess={() => <Navigate to="/login" />} />}
-          />
+          <Route path="/register" element={<RegisterPage />} />
           <Route
             path="/dashboard"
             element={
               token && userRole === "admin" ? (
                 <AdminDashboard onLogout={handleLogout} />
               ) : (
-                <Navigate to="/login" />
+                <Navigate to="/login" replace />
               )
             }
           />
@@ -69,7 +70,7 @@ function App() {
               token && userRole === "cliente" ? (
                 <ClientDashboard onLogout={handleLogout} />
               ) : (
-                <Navigate to="/login" />
+                <Navigate to="/login" replace />
               )
             }
           />
@@ -80,4 +81,3 @@ function App() {
 }
 
 export default App;
-

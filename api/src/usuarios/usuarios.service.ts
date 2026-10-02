@@ -16,10 +16,12 @@ export class UsuariosService {
   }
 
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
-    return this.usuarioRepository.findOne({
-      where: { email },
-      select: ['id', 'nome', 'email', 'senha', 'role'],
-    });
+    // senha has select:false — QueryBuilder addSelect is the reliable way
+    return this.usuarioRepository
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.senha')
+      .where('usuario.email = :email', { email })
+      .getOne();
   }
 
   async findAll(): Promise<Usuario[]> {
